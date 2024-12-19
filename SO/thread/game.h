@@ -5,9 +5,13 @@
 #include <pthread.h>
 #include <stdbool.h>
 
+#define MAP_HEIGHT 40
+#define MAP_WIDTH 50
 
 // Funzioni
-void start_game(int height,int width,int starty,int startx);             // Inizializza il gioco
-void *timer_thread(); // Funzione del thread per il timer
+
+extern pthread_mutex_t render_mutex; //mutex per il render delle finestre
+
+void start_game();             // Inizializza il gioco
 
 #endif // GAME_H
