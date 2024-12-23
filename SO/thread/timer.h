@@ -14,8 +14,8 @@ extern bool timer_running;     // Stato del timer
 extern pthread_mutex_t timer_mutex; // Mutex per sincronizzazione
 
 // Funzioni
-void start_timer(WINDOW* win);       // Avvia il timer con una durata specificata
 void stop_timer();                    // Ferma il timer
+void resetTimer();
 void *timer_thread(void* arg);        // Funzione del thread del timer
 
 #endif // TIMER_H

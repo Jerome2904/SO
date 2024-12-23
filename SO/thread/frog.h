@@ -12,11 +12,10 @@
 // Struttura per rappresentare la rana
 typedef struct {
     int x, y;                       // Posizione della rana
-    char shape[FROG_ROWS][FROG_COLS]; // Forma della rana
+    char sprite[FROG_ROWS][FROG_COLS]; // Forma della rana
 } Frog;
 
 // Variabili globali
-extern bool frog_running;           // Stato del thread della rana
 extern pthread_mutex_t frog_mutex; //mutex per lo spostamento rana
 
 // Funzioni

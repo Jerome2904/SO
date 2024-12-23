@@ -8,8 +8,20 @@ int time_left;
 bool timer_running;
 pthread_mutex_t timer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void start_timer(WINDOW* win) {
-    pthread_t tid;
+void stop_timer() {
+    pthread_mutex_lock(&timer_mutex);
+    timer_running = false;
+    pthread_mutex_unlock(&timer_mutex);
+}
+
+void resetTimer() {
+    pthread_mutex_lock(&timer_mutex);
+    time_left = TIMER_DURATION;
+    pthread_mutex_unlock(&timer_mutex);
+}
+
+void *timer_thread(void* arg) {
+    WINDOW* win = (WINDOW*) arg;
 
     // Inizializza le variabili globali
     pthread_mutex_lock(&timer_mutex);
@@ -17,21 +29,15 @@ void start_timer(WINDOW* win) {
     timer_running = true;
     pthread_mutex_unlock(&timer_mutex);
 
-    // Crea il thread del timer
-    pthread_create(&tid, NULL, timer_thread, win);
-    pthread_detach(tid); // Rendi il thread "detached" per evitarne la join esplicita
-}
+    while (true) {
 
-void stop_timer() {
-    pthread_mutex_lock(&timer_mutex);
-    timer_running = false;
-    frog_running = false;
-    pthread_mutex_unlock(&timer_mutex);
-}
+        pthread_mutex_lock(&gameover_mutex);
+        if (gameover) {
+            pthread_mutex_unlock(&gameover_mutex);
+            break; // Esci dal ciclo se il gioco è terminato
+        }
+        pthread_mutex_unlock(&gameover_mutex);
 
-void *timer_thread(void* arg) {
-    WINDOW* win = (WINDOW*) arg;
-    while (1) {
         pthread_mutex_lock(&timer_mutex);
         if (!timer_running || time_left <= 0) {
             // Cancella il contenuto della finestra del timer
@@ -39,9 +45,10 @@ void *timer_thread(void* arg) {
             pthread_mutex_lock(&render_mutex);
             wrefresh(win);
             pthread_mutex_unlock(&render_mutex);
-
-            timer_running = false; // Interrompe il timer
             pthread_mutex_unlock(&timer_mutex);
+
+            setGameover();
+            
             break;
         }
 
@@ -56,9 +63,7 @@ void *timer_thread(void* arg) {
 
         time_left--;
         pthread_mutex_unlock(&timer_mutex);
-
         sleep(1); // Aspetta un secondo
     }
     pthread_exit(NULL);
-    return NULL;
 }

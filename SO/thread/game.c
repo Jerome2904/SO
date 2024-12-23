@@ -5,12 +5,13 @@
 #include "frog.h"
 #include "map.h"
 #include "paramThreads.h"
+#include "hole.h"
 
 
-// Mutex per sincronizzare le chiamate a wrefresh
+bool gameover=false;
 pthread_mutex_t render_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gameover_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void init_map(WINDOW* win);
 
 void start_game() {
     
@@ -20,12 +21,18 @@ void start_game() {
     pthread_mutex_lock(&render_mutex);
     wrefresh(timer_win);
     pthread_mutex_unlock(&render_mutex);
-    // Crea la finestra di gioco e di sfondo
+    // Crea la finestra di gioco
     WINDOW *game_win = newwin(MAP_HEIGHT, MAP_WIDTH, (LINES - MAP_HEIGHT) / 2, (COLS - MAP_WIDTH) / 2);
     box(game_win, 0, 0);
     keypad(game_win, TRUE);
 
+    //inizializzo le tane
+    init_holes();
+    
+    //inizializzo la matrice rappresentante la mappa
     init_bckmap();
+    init_map_holes();
+
     draw_map(game_win);
     
     Frog frog;
@@ -35,17 +42,29 @@ void start_game() {
     // Crea il thread della rana
     pthread_t frog_tid;
     pthread_create(&frog_tid, NULL,frog_thread, &frogprm);
-    pthread_detach(frog_tid);
 
     // Inizializza il timer
-    start_timer(timer_win);
-    // Mostra la finestra e gestisci il gioco
-    while (timer_running && frog_running) {
+    pthread_t timer_tid;
+    pthread_create(&timer_tid, NULL, timer_thread, timer_win);
+    
+    
+    // Aspetta la fine del gioco
+    pthread_mutex_lock(&gameover_mutex);
+    while (!gameover) {
+        pthread_mutex_unlock(&gameover_mutex);
+        usleep(10000); // Riduci il carico sulla CPU
+        pthread_mutex_lock(&gameover_mutex);
     }
+    pthread_mutex_unlock(&gameover_mutex);
 
-    pthread_join(frog_tid,NULL);
+    // Aspetta che i thread terminino
+    pthread_join(frog_tid, NULL);
+    pthread_join(timer_tid, NULL);
+
     werase(timer_win);
+    wrefresh(timer_win);
     delwin(timer_win);
+    
     // Fine del gioco
     werase(game_win);
     box(game_win,0,0);
@@ -56,5 +75,11 @@ void start_game() {
 
     
     delwin(game_win);
+}
+
+void setGameover(){
+    pthread_mutex_lock(&gameover_mutex);
+    gameover=true;
+    pthread_mutex_unlock(&gameover_mutex);
 }
 
