@@ -23,14 +23,12 @@ void resetTimer() {
 void *timer_thread(void* arg) {
     WINDOW* win = (WINDOW*) arg;
 
-    // Inizializza le variabili globali
     pthread_mutex_lock(&timer_mutex);
     time_left = TIMER_DURATION;
     timer_running = true;
     pthread_mutex_unlock(&timer_mutex);
 
     while (true) {
-
         pthread_mutex_lock(&gameover_mutex);
         if (gameover) {
             pthread_mutex_unlock(&gameover_mutex);
@@ -41,8 +39,8 @@ void *timer_thread(void* arg) {
         pthread_mutex_lock(&timer_mutex);
         if (!timer_running || time_left <= 0) {
             // Cancella il contenuto della finestra del timer
-            werase(win);
             pthread_mutex_lock(&render_mutex);
+            werase(win);
             wrefresh(win);
             pthread_mutex_unlock(&render_mutex);
             pthread_mutex_unlock(&timer_mutex);

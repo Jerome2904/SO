@@ -23,7 +23,7 @@ int main() {
         init_pair(1, COLOR_RED, COLOR_BLACK); // Colori per opzione selezionata
     }
 
-
+    //Inizializzo la finestra iniziale
     int menu_starty = (LINES - MAP_HEIGHT) / 2;
     int menu_startx = (COLS - MAP_WIDTH) / 2;
 

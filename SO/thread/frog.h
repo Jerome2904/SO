@@ -20,7 +20,9 @@ extern pthread_mutex_t frog_mutex; //mutex per lo spostamento rana
 
 // Funzioni
 void init_frog(Frog *frog);
-void draw_frog(const Frog *frog,WINDOW* win);
+void clear_frog(Frog *frog,WINDOW* win);
+void update_frog(void* arg,int input);
+void draw_frog(Frog *frog,WINDOW* win);
 void *frog_thread(void* arg);       // Funzione del thread della rana
 
 #endif // FROG_H
