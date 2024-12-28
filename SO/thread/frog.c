@@ -137,17 +137,14 @@ void *frog_thread(void* arg) {
             case 'q':
             case 'Q':
                 event.type = ch;
-                pthread_mutex_lock(&buffer.mutex);
+                
                 buffer_push(&buffer, event);
-                pthread_mutex_unlock(&buffer.mutex);  
+        
                 break;
             default:
                 break;
         }
 
-        
-        
-        
     }
     pthread_exit(NULL);
 }

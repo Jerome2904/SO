@@ -65,32 +65,27 @@ void start_game() {
         }
         pthread_mutex_unlock(&gameover_mutex);
 
-        pthread_mutex_lock(&buffer.mutex);
-        if (!buffer.is_empty){
-            event= buffer_pop(&buffer);
-            pthread_mutex_unlock(&buffer.mutex);
-            switch (event.type){
-                case KEY_UP:
-                case KEY_LEFT:
-                case KEY_RIGHT:
-                case KEY_DOWN:
-                    clear_frog(&frog,game_win);
-                    update_frog(&frogprm,event.type);
-                    draw_frog(&frog,game_win);
-                    break;
-                case 'q':
-                case 'Q':
-                    setGameover();
-                    break;
-                default:
-                    break;
-            }
-        }else{
-            pthread_mutex_unlock(&buffer.mutex);
-            usleep(2000);
+        event = buffer_pop(&buffer); //estrae un evento dal buffer
+        
+        //gestione dell'evento
+        switch (event.type) {
+            case KEY_UP:
+            case KEY_LEFT:
+            case KEY_RIGHT:
+            case KEY_DOWN:
+                clear_frog(&frog, game_win);
+                update_frog(&frogprm, event.type);
+                draw_frog(&frog, game_win);
+                break;
+            case 'q':
+            case 'Q':
+                setGameover();
+                break;
+            default:
+                break;
         }
+        
     }
-
     // Aspetta che i thread terminino
     pthread_join(frog_tid, NULL);
     pthread_join(timer_tid, NULL);

@@ -41,9 +41,9 @@ int main() {
         mvwprintw(menu_win, 1, (MAP_WIDTH - 22) / 2, "Frogger Resurrection");
         for (int i = 0; i < NUM_OPTIONS; i++) {
             if (i == selected) {
-                wattron(menu_win, COLOR_PAIR(1));
+                wattron(menu_win, A_REVERSE | A_BOLD | COLOR_PAIR(1));
                 mvwprintw(menu_win, 3 + i, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
-                wattroff(menu_win, COLOR_PAIR(1));
+                wattroff(menu_win, A_REVERSE | A_BOLD | COLOR_PAIR(1));
             } else {
                 mvwprintw(menu_win, 3 + i, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
             }

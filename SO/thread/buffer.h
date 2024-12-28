@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <semaphore.h>
 
 #define BUFFER_SIZE 16 // Dimensione del buffer circolare
 
@@ -17,8 +18,8 @@ typedef struct {
     GameEvent events[BUFFER_SIZE]; // Array di eventi
     int head;                  // Indice di testa
     int tail;                  // Indice di coda
-    bool is_empty;             // Booleano buffer vuoto
-    bool is_full;              // Booleano buffer pieno
+    sem_t empty;             // Semaforo per spazio libero
+    sem_t full;              // Semaforo per spazio occupato
     pthread_mutex_t mutex;     // Mutex per sincronizzare l'accesso
 } CircularBuffer;
 
