@@ -1,36 +1,122 @@
 #include "frog.h"
 #include "game.h"
-#include "map.h"
-#include "hole.h"
-#include "timer.h"
-#include "paramThreads.h"
 #include "buffer.h"
+#include "map.h"
+#include "consumer.h"
+#include "grenade.h"
 
 
-pthread_mutex_t frog_mutex = PTHREAD_MUTEX_INITIALIZER;
+void *frog_thread(void *arg) {
+    FrogArgs *args = (FrogArgs *)arg;
+    CircularBuffer *buffer = args->buffer;
+    WINDOW *game_win = args->win;
+    Entity frog;
+    frog_init(&frog);
+    int ch;
+    Message msg;
+    pthread_t grenade_left_tid, grenade_right_tid;
 
-// Inizializza la rana
-void init_frog(Frog *frog) {
-    frog->x = FROG_ROWS;
-    frog->y = MAP_HEIGHT - FROG_COLS;
+    while (1) {
+        // Controllo eventuale reset
+        pthread_mutex_lock(&reset_mutex);
+        if (round_reset_flag) {
+            frog.x = (MAP_WIDTH - frog.width) / 2;
+            frog.y = MAP_HEIGHT - frog.height - 1;
+            round_reset_flag = 0;
+        }
+        pthread_mutex_unlock(&reset_mutex);
+        
+        ch = wgetch(game_win);
+        switch (ch) {
+            case KEY_UP:
+                frog.y -= VERTICAL_JUMP;
+                //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
+                if (frog.y == HOLE_Y) {
+                    // se la rana si trova nella stessa colonna di una tana può entrare
+                    if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
+                        frog.y == HOLE_Y; // Enta nella tana 
 
+                        int hole_index = check_hole_reached(&frog);
+                        if (tane[hole_index].occupied) frog.y += VERTICAL_JUMP; // Se la tana è già stata raggiunta, non è più possibile entrare
+                    } 
+                    else 
+                        frog.y += VERTICAL_JUMP; 
+                }
+                break;
+            case KEY_DOWN:
+                frog.y += VERTICAL_JUMP;
+                break;
+            case KEY_LEFT:
+                frog.x -= HORIZONTAL_JUMP;
+                break;
+            case KEY_RIGHT:
+                frog.x += HORIZONTAL_JUMP;
+                break;
+            case ' ':
+            {
+                // Allocazione dinamica dei parametri
+                GrenadeArgs *grenade_args_left = malloc(sizeof(GrenadeArgs));
+                grenade_args_left->buffer = buffer;
+                grenade_args_left->start_x = frog.x-1;
+                grenade_args_left->start_y = frog.y;
+                grenade_args_left->dx = -1;
+                grenade_args_left->speed = 40000;
+                
+                GrenadeArgs *grenade_args_right = malloc(sizeof(GrenadeArgs));
+                grenade_args_right->buffer = buffer;
+                grenade_args_right->start_x = frog.x + frog.width;
+                grenade_args_right->start_y = frog.y;
+                grenade_args_right->dx = 1;
+                grenade_args_right->speed = 40000;
+
+                pthread_create(&grenade_left_tid, NULL, grenade_left_thread, grenade_args_left);
+                pthread_create(&grenade_right_tid, NULL, grenade_right_thread, grenade_args_right);
+                pthread_detach(grenade_left_tid);
+                pthread_detach(grenade_right_tid);
+                break;
+            }
+            case 'q':
+            case 'Q':
+                
+                
+                break;
+            default:
+                break;
+        }
+        
+        msg.type = MSG_FROG_UPDATE;
+        msg.entity = frog;
+        buffer_push(buffer, msg);
+        usleep(50000);
+    }
+    return NULL;
+}
+
+void frog_init(Entity *frog) {
+    frog->x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+    frog->y = MAP_HEIGHT - FROG_HEIGHT - 1;
+    frog->width = FROG_WIDTH;
+    frog->height = FROG_HEIGHT;
+    frog->type = ENTITY_FROG;
     // Forma della rana
-    char sprite[FROG_ROWS][FROG_COLS] = {
-        {'/', 'O', '\\'},
-        {'Z', 'U', 'Z'},
+    char sprite[FROG_HEIGHT][FROG_WIDTH] = {
+        {'v', 'O', 'v'},
+        {'w', 'U', 'w'},
     };
 
-    for (int i = 0; i < FROG_ROWS; i++) {
-        for (int j = 0; j < FROG_COLS; j++) {
+    for (int i = 0; i < FROG_HEIGHT; i++) {
+        for (int j = 0; j < FROG_WIDTH; j++) {
             frog->sprite[i][j] = sprite[i][j];
         }
     }
 }
 
+
+
 // Disegna la rana sullo schermo
-void draw_frog(Frog *frog,WINDOW* win) {
-    for (int i = 0; i < FROG_ROWS; i++) {
-        for (int j = 0; j < FROG_COLS; j++) {
+void draw_frog(WINDOW *win, Entity *frog) {
+    for (int i = 0; i < frog->height; i++) {
+        for (int j = 0; j < frog->width; j++) {
             wattron(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
             mvwaddch(win,frog->y + i, frog->x + j, frog->sprite[i][j]);
             wattroff(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
@@ -40,112 +126,15 @@ void draw_frog(Frog *frog,WINDOW* win) {
     wrefresh(win);
     pthread_mutex_unlock(&render_mutex);
 }
-
-//aggiorna le posizioni della rana.
-void update_frog(void* arg,int input){
-    FrogThreadParams* prms = (FrogThreadParams*) arg;
-    Frog* frog = prms->frog;
-    WINDOW* win = prms->win;
-
-    //in base all'input cambiamo la posizione
-    switch (input) {
-        case KEY_UP:
-            //raggiunta una tana, la riempie e rinizia da capo
-            if (frog->y == HOLE_Y+1){
-                    fillHole(arg);
-                    //rimetto la rana nella posizione iniziale
-                    frog->x = FROG_ROWS;
-                    frog->y = MAP_HEIGHT - FROG_COLS;
-                        
-                    resetTimer();
-                    
-                    if(checkHoles()){
-                        setGameover();
-                    }
-                }
-                
-            //la rana puo andare SEMPRE verso su fin quando non arriva al bordo della tana
-            if (frog->y > HOLE_Y+2){
-                frog->y--;
-            //appena sotto la tana controlliamo che la rana abbia la stessa x di una delle tane. se si la rana puo salire
-            }else if (frog->x == HOLE_X1 ||frog->x == HOLE_X2 ||frog->x == HOLE_X3 ||frog->x == HOLE_X4 ||frog->x == HOLE_X5){
-                frog->y--;
-            }
-            break;
-        case KEY_DOWN:
-            if (frog->y + FROG_ROWS < MAP_HEIGHT - 1) frog->y++;
-            break;
-        case KEY_LEFT:
-            //quando arriva a meta' tana, la rana non puo muoversi di lato
-            if (frog->x > 1 && frog->y!=HOLE_Y+1){
-                frog->x--;
-            }
-            break;
-        case KEY_RIGHT:
-            //quando arriva a meta' tana, la rana non puo muoversi di lato
-            if (frog->x + FROG_COLS < MAP_WIDTH - 1 && frog->y!=HOLE_Y+1){
-                frog->x++;
-            } 
-            break;
-    }
-    
-}
-
-// Cancella la rana dalla posizione attuale
-void clear_frog(Frog *frog,WINDOW* win) {
-    for (int i = 0; i < FROG_ROWS; i++) {
-        for (int j = 0; j < FROG_COLS; j++) {
+void clear_frog(WINDOW *win, Entity *frog) {
+    for (int i = 0; i < frog->height; i++) {
+        for (int j = 0; j < frog->width; j++) {
             wattron(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
-            mvwaddch(win,frog->y + i, frog->x + j, ' ');
+            mvwaddch(win,frog->y + i, frog->x + j,' ');
             wattroff(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
         }
     }
-
     pthread_mutex_lock(&render_mutex);
     wrefresh(win);
     pthread_mutex_unlock(&render_mutex);
 }
-
-// Funzione del thread della rana
-void *frog_thread(void* arg) {
-    
-    FrogThreadParams* prms = (FrogThreadParams*) arg;
-    Frog* frog = prms->frog;
-    WINDOW* win = prms->win;
-
-    GameEvent event;
-    event.x=frog->x;
-    event.y=frog->y;
-
-
-    while (true) {
-        //chiude il thread rana quando termina il gioco
-        pthread_mutex_lock(&gameover_mutex);
-        if(gameover){
-            pthread_mutex_unlock(&gameover_mutex);
-            break; 
-        }else{
-            pthread_mutex_unlock(&gameover_mutex);
-        }
-        
-        int ch = wgetch(win);
-        switch (ch){
-            case KEY_UP:
-            case KEY_DOWN:
-            case KEY_LEFT:
-            case KEY_RIGHT:
-            case 'q':
-            case 'Q':
-                event.type = ch;
-                
-                buffer_push(&buffer, event);
-        
-                break;
-            default:
-                break;
-        }
-
-    }
-    pthread_exit(NULL);
-}
-

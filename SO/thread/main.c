@@ -1,12 +1,5 @@
-#include <ncurses.h>
-#include <stdlib.h>
-#include <string.h>
+
 #include "game.h"
-
-#define NUM_OPTIONS 3
-
-void show_instructions(WINDOW *menu_win);
-void exit_program(WINDOW *menu_win);
 
 int main() {
     // Inizializzazione di ncurses
@@ -30,22 +23,23 @@ int main() {
     WINDOW *menu_win=newwin(MAP_HEIGHT, MAP_WIDTH, menu_starty, menu_startx);
     keypad(menu_win, TRUE);
     box(menu_win, 0, 0);
+    refresh();
 
-    const char *menu_options[NUM_OPTIONS] = {"Gioca", "Istruzioni", "Esci"};
+    const char *menu_options[NUM_OPTIONS] = {"GIOCA","ISTRUZIONI", "ESCI"};
     int selected = 0;
 
     while (1) {
         // Disegna il menu
         werase(menu_win);
         box(menu_win, 0, 0);
-        mvwprintw(menu_win, 1, (MAP_WIDTH - 22) / 2, "Frogger Resurrection");
+        mvwprintw(menu_win, 10, (MAP_WIDTH - strlen("FROGGER RESURRECTION")) / 2, "FROGGER RESURRECTION");
         for (int i = 0; i < NUM_OPTIONS; i++) {
             if (i == selected) {
                 wattron(menu_win, A_REVERSE | A_BOLD | COLOR_PAIR(1));
-                mvwprintw(menu_win, 3 + i, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
+                mvwprintw(menu_win, 15 + i*2, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
                 wattroff(menu_win, A_REVERSE | A_BOLD | COLOR_PAIR(1));
             } else {
-                mvwprintw(menu_win, 3 + i, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
+                mvwprintw(menu_win, 15 + i*2, (MAP_WIDTH - strlen(menu_options[i])) / 2, "%s", menu_options[i]);
             }
         }
         wrefresh(menu_win);
@@ -85,12 +79,12 @@ void show_instructions(WINDOW *menu_win) {
     // Disegna le istruzioni
     werase(menu_win);
     box(menu_win, 0, 0);
-    mvwprintw(menu_win, 1, (MAP_WIDTH - 11) / 2, "Istruzioni");
+    mvwprintw(menu_win, 3, (MAP_WIDTH - 11)/2, "ISTRUZIONI");
 
-    mvwprintw(menu_win, 3, 2, "1. Muovi la rana con le frecce.");
-    mvwprintw(menu_win, 6, 2, "2. Evita gli ostacoli e raggiungi la tana.");
-    mvwprintw(menu_win, 9, 2, "3. Premi SPAZIO per lanciare granate.");
-    mvwprintw(menu_win, 12, 2, "Premi un tasto per tornare al menu...");
+    mvwprintw(menu_win, 6, (MAP_WIDTH - 32)/2, "1. Muovi la rana con le frecce.");
+    mvwprintw(menu_win, 9, (MAP_WIDTH - 43)/2, "2. Evita gli ostacoli e raggiungi la tana.");
+    mvwprintw(menu_win, 12, (MAP_WIDTH - 38)/2, "3. Premi SPAZIO per lanciare granate.");
+    mvwprintw(menu_win, 15, (MAP_WIDTH - 38)/2, "Premi un tasto per tornare al menu...");
     wrefresh(menu_win);
 
     getch(); // Aspetta un input
@@ -105,4 +99,3 @@ void exit_program(WINDOW *menu_win) {
     endwin();
     exit(0);
 }
-

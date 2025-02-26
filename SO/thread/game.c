@@ -1,114 +1,62 @@
-
-#include <unistd.h> // Per sleep()
-#include "timer.h"
 #include "game.h"
 #include "frog.h"
-#include "map.h"
-#include "paramThreads.h"
-#include "hole.h"
+#include "consumer.h"
+#include "timer.h"
 #include "buffer.h"
+#include "map.h"
 
 
-bool gameover=false;
-pthread_mutex_t render_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t gameover_mutex = PTHREAD_MUTEX_INITIALIZER;
-CircularBuffer buffer;
+int round_reset_flag = 0;
+pthread_mutex_t reset_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 void start_game() {
-    
-    // Crea la finestra del timer (altezza 3, subito sopra la finestra di gioco)
-    WINDOW *timer_win = newwin(4, MAP_WIDTH, (LINES - MAP_HEIGHT) / 2 - 4, (COLS - MAP_WIDTH) / 2);
-    box(timer_win,0,0);
-    pthread_mutex_lock(&render_mutex);
-    wrefresh(timer_win);
-    pthread_mutex_unlock(&render_mutex);
-    // Crea la finestra di gioco
-    WINDOW *game_win = newwin(MAP_HEIGHT, MAP_WIDTH, (LINES - MAP_HEIGHT) / 2, (COLS - MAP_WIDTH) / 2);
-    box(game_win, 0, 0);
+    // Inizializzo la finestra di gioco
+    int game_starty = (LINES - MAP_HEIGHT) / 2;
+    int game_startx = (COLS - MAP_WIDTH) / 2;
+
+    WINDOW *game_win = newwin(MAP_HEIGHT, MAP_WIDTH, game_starty, game_startx);
     keypad(game_win, TRUE);
-    //inizializzo le tane
-    init_holes();
-    //inizializzo la matrice rappresentante la mappa
+    nodelay(game_win, TRUE);
+    box(game_win, 0, 0);
     init_bckmap();
+    init_holes_positions();
     init_map_holes();
-    //disegno la mappa su schermo
     draw_map(game_win);
 
-    //inizializzo il buffer
+    WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, game_starty + MAP_HEIGHT, game_startx);
+    box(info_win, 0, 0);
+    wrefresh(info_win);
+
+    // Inizializzo il buffer circolare
+    CircularBuffer buffer;
     buffer_init(&buffer);
 
-    //inizializzo la rana
-    Frog frog;
-    init_frog(&frog);
-    FrogThreadParams frogprm = {&frog,game_win};
-    // Crea il thread della rana
-    pthread_t frog_tid;
-    pthread_create(&frog_tid, NULL,frog_thread, &frogprm);
-    // Inizializza il timer
-    pthread_t timer_tid;
-    pthread_create(&timer_tid, NULL, timer_thread, timer_win);     
+    // Argomenti per i thread
+    ConsumerArgs consumer_args = {&buffer, game_win, info_win};
+    FrogArgs frog_args = {&buffer, game_win};
+    TimerArgs timer_args = {&buffer};
+
+    pthread_t frog_tid, consumer_tid,timer_tid;
+
+    // Creazione dei thread
+    pthread_create(&frog_tid, NULL, frog_thread, &frog_args);
+    pthread_create(&timer_tid, NULL, timer_thread, &timer_args);
+    pthread_create(&consumer_tid, NULL, consumer_thread, &consumer_args);
+
     
+    pthread_join(consumer_tid, NULL);
+    pthread_cancel(frog_tid);
+    pthread_cancel(timer_tid);
 
-    GameEvent event;
-    
-    while(true){
-        pthread_mutex_lock(&gameover_mutex);
-        if(gameover){
-            //aggiorno la mappa
-            pthread_mutex_lock(&render_mutex);
-            werase(timer_win);
-            wrefresh(timer_win);
-            pthread_mutex_unlock(&render_mutex);
+    buffer_destroy(&buffer);    
 
-            pthread_mutex_unlock(&gameover_mutex);
-            break;
-        }
-        pthread_mutex_unlock(&gameover_mutex);
+    // Pulizia della finestra di gioco
+    werase(info_win);
+    wrefresh(info_win);
+    delwin(info_win);
 
-        event = buffer_pop(&buffer); //estrae un evento dal buffer
-        
-        //gestione dell'evento
-        switch (event.type) {
-            case KEY_UP:
-            case KEY_LEFT:
-            case KEY_RIGHT:
-            case KEY_DOWN:
-                clear_frog(&frog, game_win);
-                update_frog(&frogprm, event.type);
-                draw_frog(&frog, game_win);
-                break;
-            case 'q':
-            case 'Q':
-                setGameover();
-                break;
-            default:
-                break;
-        }
-        
-    }
-    // Aspetta che i thread terminino
-    pthread_join(frog_tid, NULL);
-    pthread_join(timer_tid, NULL);
-
-    werase(timer_win);
-    wrefresh(timer_win);
-    delwin(timer_win);
-    
-    // Fine del gioco
     werase(game_win);
-    box(game_win,0,0);
-    mvwprintw(game_win, 2, (MAP_WIDTH - 12) / 2, "Fine partita!");
-    mvwprintw(game_win, 4, (MAP_WIDTH - 28) / 2, "Premi un tasto per continuare...");
     wrefresh(game_win);
-    wgetch(game_win);
-
-    
     delwin(game_win);
 }
-
-void setGameover(){
-    pthread_mutex_lock(&gameover_mutex);
-    gameover=true;
-    pthread_mutex_unlock(&gameover_mutex);
-}
-
