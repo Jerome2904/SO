@@ -15,6 +15,7 @@ void *frog_thread(void *arg) {
     int ch;
     Message msg;
     pthread_t grenade_left_tid, grenade_right_tid;
+    int old_x, old_y;
 
     while (1) {
         // Controllo eventuale reset
@@ -27,21 +28,30 @@ void *frog_thread(void *arg) {
         pthread_mutex_unlock(&reset_mutex);
         
         ch = wgetch(game_win);
+        old_x=frog.x;
+        old_y=frog.y;
         switch (ch) {
             case KEY_UP:
-                frog.y -= VERTICAL_JUMP;
-                //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
-                if (frog.y == HOLE_Y) {
-                    // se la rana si trova nella stessa colonna di una tana può entrare
-                    if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
-                        frog.y == HOLE_Y; // Enta nella tana 
+                if(frog.y > HOLE_Y){
+                    frog.y -= VERTICAL_JUMP;
+                    //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
+                    if (frog.y == HOLE_Y) {
+                        // se la rana si trova nella stessa colonna di una tana può entrare
+                        if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
+                            frog.y = HOLE_Y; // Enta nella tana 
 
-                        int hole_index = check_hole_reached(&frog);
-                        if (tane[hole_index].occupied) frog.y += VERTICAL_JUMP; // Se la tana è già stata raggiunta, non è più possibile entrare
-                    } 
-                    else 
-                        frog.y += VERTICAL_JUMP; 
+                            int hole_index = check_hole_reached(&frog);
+                            if (tane[hole_index].occupied){
+                                frog.y += VERTICAL_JUMP;// Se la tana è già stata raggiunta, non è più possibile entrare
+                                } 
+                        } 
+                        else{
+                            frog.y += VERTICAL_JUMP; 
+                        }
+                        
                 }
+                }
+                
                 break;
             case KEY_DOWN:
                 frog.y += VERTICAL_JUMP;
@@ -75,19 +85,12 @@ void *frog_thread(void *arg) {
                 pthread_detach(grenade_right_tid);
                 break;
             }
-            case 'q':
-            case 'Q':
-                
-                
-                break;
-            default:
-                break;
         }
-        
-        msg.type = MSG_FROG_UPDATE;
-        msg.entity = frog;
-        buffer_push(buffer, msg);
-        usleep(50000);
+        if(old_x != frog.x || old_y != frog.y){
+            msg.type = MSG_FROG_UPDATE;
+            msg.entity = frog;
+            buffer_push(buffer, msg);
+        }
     }
     return NULL;
 }

@@ -17,7 +17,6 @@ void start_game() {
 
     WINDOW *game_win = newwin(MAP_HEIGHT, MAP_WIDTH, game_starty, game_startx);
     keypad(game_win, TRUE);
-    nodelay(game_win, TRUE);
     box(game_win, 0, 0);
     init_bckmap();
     init_holes_positions();

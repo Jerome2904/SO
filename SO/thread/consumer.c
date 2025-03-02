@@ -21,7 +21,8 @@ void *consumer_thread(void *arg) {
     WINDOW *game_win = args->game_win;
     WINDOW *info_win = args->info_win;
     Entity frog;
-    Entity grenade_left, grenade_right, grenade_left_old, grenade_right_old;
+    frog_init(&frog);
+    Entity grenade_left, grenade_right;
 
     Message msg;
     
@@ -37,7 +38,6 @@ void *consumer_thread(void *arg) {
             case MSG_FROG_UPDATE:
                 clear_frog(game_win,&frog);
                 frog = msg.entity;
-                clamp_entity(&frog);
                 // Se la rana raggiunge la riga delle tane, controlla se è in una tana libera
                 if (frog.y == HOLE_Y) {
                     hole_index = check_hole_reached(&frog);
@@ -47,6 +47,8 @@ void *consumer_thread(void *arg) {
                         score += time * 100;
                         time = ROUND_TIME;
                         reset_round();
+                        frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                        frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
                     }
                 }
                 draw_frog(game_win, &frog);
@@ -82,10 +84,10 @@ void *consumer_thread(void *arg) {
             sleep(2);
             break;
         }
-        box(game_win,0,0);
+        pthread_mutex_lock(&render_mutex);
         mvwprintw(info_win, 1, 1, "Lives: %-25d Score: %-25d Time:%4d", lives, score, time);
         wrefresh(info_win);
-        usleep(1000);
+        pthread_mutex_unlock(&render_mutex);
     }
     werase(info_win);
     wrefresh(info_win);

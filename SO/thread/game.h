@@ -17,7 +17,7 @@
 #define NUM_OPTIONS 3
 
 //Dimensioni del buffer condiviso
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 32
 
 //Dimensioni e salti della rana
 #define FROG_WIDTH 3
@@ -28,7 +28,7 @@
 // Parametri di gioco
 #define NUM_LIVES 3
 #define INITIAL_SCORE 0
-#define ROUND_TIME 5
+#define ROUND_TIME 50
 #define NUM_HOLES 5
 
 
@@ -75,9 +75,10 @@ typedef struct {
     Message buffer[BUFFER_SIZE];
     int in;
     int out;
+    int count;
     pthread_mutex_t mutex;
-    sem_t full;
-    sem_t empty;
+    pthread_cond_t full;
+    pthread_cond_t empty;
 } CircularBuffer;
 
 
