@@ -9,6 +9,9 @@
 int round_reset_flag = 0;
 pthread_mutex_t reset_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+int active_grenades = 0;
+pthread_mutex_t grenade_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 void start_game() {
     // Inizializzo la finestra di gioco

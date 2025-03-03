@@ -16,12 +16,24 @@ void *grenade_left_thread(void *arg) {
     // Inizializza la posizione con quella passata
     msg.entity.x = args->start_x;
     msg.entity.y = args->start_y;
+
+
+    pthread_mutex_lock(&grenade_mutex);
+    active_grenades++;
+    pthread_mutex_unlock(&grenade_mutex);
+
     // Aggiorna la posizione finché non raggiunge il bordo sinistro
     while (msg.entity.x > 0) {
         usleep(args->speed);
         msg.entity.x += args->dx;
         buffer_push(buffer, msg);
     }
+
+    pthread_mutex_lock(&grenade_mutex);
+    active_grenades--;
+    pthread_mutex_unlock(&grenade_mutex);
+    
+    free(args);
     return NULL;
 }
 
@@ -38,6 +50,10 @@ void *grenade_right_thread(void *arg) {
     // Inizializza la posizione con quella passata
     msg.entity.x = args->start_x;
     msg.entity.y = args->start_y;
+
+    pthread_mutex_lock(&grenade_mutex);
+    active_grenades++;
+    pthread_mutex_unlock(&grenade_mutex);
     
     // Aggiorna la posizione finché non raggiunge il bordo destro
     while (msg.entity.x < MAP_WIDTH) {
@@ -45,6 +61,12 @@ void *grenade_right_thread(void *arg) {
         msg.entity.x += args->dx; 
         buffer_push(buffer, msg);
     }
+
+    pthread_mutex_lock(&grenade_mutex);
+    active_grenades--;
+    pthread_mutex_unlock(&grenade_mutex);
+
+    free(args);
     return NULL;
 }
 

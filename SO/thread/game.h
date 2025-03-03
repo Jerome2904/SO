@@ -85,6 +85,9 @@ typedef struct {
 extern int round_reset_flag;
 extern pthread_mutex_t reset_mutex;
 
+extern int active_grenades;
+extern pthread_mutex_t grenade_mutex;
+
 
 void show_instructions(WINDOW *menu_win);
 void exit_program(WINDOW *menu_win);

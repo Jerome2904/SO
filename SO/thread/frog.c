@@ -14,6 +14,7 @@ void *frog_thread(void *arg) {
     frog_init(&frog);
     int ch;
     Message msg;
+    bool can_shoot;
     pthread_t grenade_left_tid, grenade_right_tid;
     int old_x, old_y;
 
@@ -32,9 +33,10 @@ void *frog_thread(void *arg) {
         old_y=frog.y;
         switch (ch) {
             case KEY_UP:
+                //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
                 if(frog.y > HOLE_Y){
                     frog.y -= VERTICAL_JUMP;
-                    //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
+                    
                     if (frog.y == HOLE_Y) {
                         // se la rana si trova nella stessa colonna di una tana può entrare
                         if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
@@ -54,16 +56,25 @@ void *frog_thread(void *arg) {
                 
                 break;
             case KEY_DOWN:
-                frog.y += VERTICAL_JUMP;
+                if(frog.y<MAP_HEIGHT-FROG_HEIGHT-1){
+                    frog.y += VERTICAL_JUMP;
+                    }
                 break;
             case KEY_LEFT:
-                frog.x -= HORIZONTAL_JUMP;
+                if(frog.x>FROG_WIDTH){
+                    frog.x -= HORIZONTAL_JUMP;
+                    }
                 break;
             case KEY_RIGHT:
-                frog.x += HORIZONTAL_JUMP;
+                if(frog.x<MAP_WIDTH-FROG_WIDTH-1){
+                    frog.x += HORIZONTAL_JUMP;
+                }
                 break;
             case ' ':
-            {
+                pthread_mutex_lock(&grenade_mutex);
+                can_shoot=(active_grenades==0);
+                pthread_mutex_unlock(&grenade_mutex);
+                if(can_shoot){
                 // Allocazione dinamica dei parametri
                 GrenadeArgs *grenade_args_left = malloc(sizeof(GrenadeArgs));
                 grenade_args_left->buffer = buffer;
