@@ -1,4 +1,5 @@
 #include "game.h"
+#include "crocodile.h"
 #include "frog.h"
 #include "consumer.h"
 #include "timer.h"
@@ -45,6 +46,29 @@ void start_game() {
 
     pthread_t frog_tid, consumer_tid,timer_tid;
 
+    
+    RiverLane lanes[NUM_RIVER_LANES];
+    init_lanes(lanes);
+
+    pthread_t crocodile_tid[NUM_RIVER_LANES * NUM_CROC];
+
+    CrocodileArgs *crocodile_args[NUM_RIVER_LANES * NUM_CROC];
+    
+    int thread_count = 0;
+    for (int i = 0; i < NUM_RIVER_LANES; i++) {
+        for (int j = 0; j < NUM_CROC; j++) {
+            crocodile_args[thread_count] = malloc(sizeof(CrocodileArgs));
+            crocodile_args[thread_count]->buffer = &buffer;
+            crocodile_args[thread_count]->game_win = game_win;
+            crocodile_args[thread_count]->lane = &lanes[i];
+            crocodile_args[thread_count]->offset = j;
+            crocodile_args[thread_count]->index = i;
+            
+            pthread_create(&crocodile_tid[thread_count], NULL, crocodile_thread, crocodile_args[thread_count]);
+            pthread_detach(crocodile_tid[thread_count]);
+            thread_count++;
+        }
+    }
     // Creazione dei thread
     pthread_create(&frog_tid, NULL, frog_thread, &frog_args);
     pthread_create(&timer_tid, NULL, timer_thread, &timer_args);
@@ -54,6 +78,7 @@ void start_game() {
     pthread_join(consumer_tid, NULL);
     pthread_join(frog_tid, NULL);
     pthread_join(timer_tid, NULL);
+    
 
     buffer_destroy(&buffer);    
 

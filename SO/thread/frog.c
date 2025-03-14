@@ -116,8 +116,8 @@ void *frog_thread(void *arg) {
                     grenade_args_right->dx = 1;
                     grenade_args_right->speed = 40000;
 
-                    pthread_create(&grenade_left_tid, NULL, grenade_left_thread, grenade_args_left);
-                    pthread_create(&grenade_right_tid, NULL, grenade_right_thread, grenade_args_right);
+                    pthread_create(&grenade_left_tid, NULL, grenade_thread, grenade_args_left);
+                    pthread_create(&grenade_right_tid, NULL, grenade_thread, grenade_args_right);
                     pthread_detach(grenade_left_tid);
                     pthread_detach(grenade_right_tid);
                     }

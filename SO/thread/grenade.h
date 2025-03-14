@@ -12,8 +12,7 @@ typedef struct {
     int speed;
 } GrenadeArgs;
 
-void *grenade_left_thread(void *arg);
-void *grenade_right_thread(void *arg);
+void *grenade_thread(void* arg);
 void draw_grenade(WINDOW *win, Entity *grenade);
 void clear_grenade(WINDOW *win, Entity *grenade);
 

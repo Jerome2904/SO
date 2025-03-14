@@ -1,4 +1,5 @@
 #include "consumer.h"
+#include "crocodile.h"
 #include "buffer.h"
 #include "game.h"
 #include "frog.h"
@@ -20,16 +21,32 @@ void *consumer_thread(void *arg) {
     CircularBuffer *buffer = args->buffer;
     WINDOW *game_win = args->game_win;
     WINDOW *info_win = args->info_win;
+
     Entity frog;
     frog_init(&frog);
     Entity grenade_left, grenade_right;
 
+    RiverLane lanes[NUM_RIVER_LANES];
+    init_lanes(lanes);
+    
+    Entity crocodiles[NUM_RIVER_LANES][NUM_CROC];
+
+    // Inizializza tutti i coccodrilli (all'inizio)
+    for (int i = 0; i < NUM_RIVER_LANES; i++) {
+        for (int j = 0; j < NUM_CROC; j++) {
+            crocodile_init(&crocodiles[i][j], &lanes[i], j);
+        }
+    }
+    
     Message msg;
     
     int lives = NUM_LIVES;
     int time = ROUND_TIME;
     int hole_index = -1;
     int holes_reached = 0;
+
+    int lane_idx;
+    int croc_idx;
 
     while (lives > 0) {
         pthread_mutex_lock(&game_state_mutex);
@@ -86,6 +103,16 @@ void *consumer_thread(void *arg) {
                 grenade_right = msg.entity;
                 draw_grenade(game_win,&grenade_right);
                 break;
+            case MSG_CROC_UPDATE:
+                lane_idx = msg.id.lane;
+                croc_idx = msg.id.croc_index;
+                if (lane_idx >= 0 && lane_idx < NUM_RIVER_LANES && croc_idx >= 0 && croc_idx < NUM_CROC) {
+                    clear_crocodile(game_win, &crocodiles[lane_idx][croc_idx]);
+                    crocodiles[lane_idx][croc_idx] = msg.entity;
+                    draw_crocodile(game_win, &crocodiles[lane_idx][croc_idx]);
+                }
+                break;
+                
         }
         if (lives <= 0 || holes_reached == NUM_HOLES) {
             if (holes_reached == NUM_HOLES){
