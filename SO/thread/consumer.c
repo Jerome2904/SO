@@ -29,14 +29,14 @@ void *consumer_thread(void *arg) {
     RiverLane lanes[NUM_RIVER_LANES];
     init_lanes(lanes);
     
-    Entity crocodiles[NUM_RIVER_LANES][NUM_CROC];
-
-    // Inizializza tutti i coccodrilli (all'inizio)
-    for (int i = 0; i < NUM_RIVER_LANES; i++) {
-        for (int j = 0; j < NUM_CROC; j++) {
-            crocodile_init(&crocodiles[i][j], &lanes[i], j);
-        }
+    //Ricicliamo i buffer circolari per gestire spawn e despawn dei singoli coccodrilli nelle corsie
+    CircularBuffer *lane_queue[NUM_RIVER_LANES];
+    for (int i = 0; i < NUM_RIVER_LANES; i++)
+    {
+        lane_queue[i]=malloc(sizeof(CircularBuffer));
+        buffer_init(lane_queue[i]);
     }
+    
     
     Message msg;
     
@@ -103,13 +103,34 @@ void *consumer_thread(void *arg) {
                 grenade_right = msg.entity;
                 draw_grenade(game_win,&grenade_right);
                 break;
+
+
             case MSG_CROC_UPDATE:
-                lane_idx = msg.id.lane;
-                croc_idx = msg.id.croc_index;
-                if (lane_idx >= 0 && lane_idx < NUM_RIVER_LANES && croc_idx >= 0 && croc_idx < NUM_CROC) {
-                    clear_crocodile(game_win, &crocodiles[lane_idx][croc_idx]);
-                    crocodiles[lane_idx][croc_idx] = msg.entity;
-                    draw_crocodile(game_win, &crocodiles[lane_idx][croc_idx]);
+                // Find the crocodile in the lane queue (using a more reliable method)
+                int found = 0;
+                int buff_idx = lane_queue[msg.id]->out;
+                for (int i = 0; i < lane_queue[msg.id]->count; i++) {
+                    // Using a more forgiving position match
+                    if (abs(msg.entity.x - lane_queue[msg.id]->buffer[buff_idx].entity.x) <= 1) {
+                        clear_crocodile(game_win, &lane_queue[msg.id]->buffer[buff_idx].entity);
+                        lane_queue[msg.id]->buffer[buff_idx] = msg;
+                        draw_crocodile(game_win, &lane_queue[msg.id]->buffer[buff_idx].entity);
+                        found = 1;
+                        break;
+                    }
+                    buff_idx = (buff_idx + 1) % BUFFER_SIZE;
+                }
+                // If not found, it might be a new crocodile, so add it
+                if (!found && lane_queue[msg.id]->count < BUFFER_SIZE) {
+                    buffer_push(lane_queue[msg.id], msg);
+                    draw_crocodile(game_win, &msg.entity);
+                }
+                break;
+            case MSG_CROC_DESPAWN:
+                // Remove the crocodile from the lane queue
+                if (lane_queue[msg.id]->count > 0) {
+                    Message removed_croc = buffer_pop(lane_queue[msg.id]);
+                    clear_crocodile(game_win, &removed_croc.entity);
                 }
                 break;
                 

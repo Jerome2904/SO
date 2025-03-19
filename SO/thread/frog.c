@@ -18,6 +18,10 @@ void *frog_thread(void *arg) {
     pthread_t grenade_left_tid, grenade_right_tid;
     int old_x, old_y;
 
+    msg.type = MSG_FROG_UPDATE;
+    msg.entity = frog;
+    buffer_push(buffer, msg);
+
     while (1) {
         // Controllo eventuale reset
         pthread_mutex_lock(&reset_mutex);
@@ -125,7 +129,6 @@ void *frog_thread(void *arg) {
 
             }
             if(old_x != frog.x || old_y != frog.y){
-                msg.type = MSG_FROG_UPDATE;
                 msg.entity = frog;
                 buffer_push(buffer, msg);
             }

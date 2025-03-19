@@ -67,7 +67,7 @@ typedef struct{
     int y;
     int direction;
     int speed;
-    bool can_spawn;
+    int index;
 }RiverLane;
 
 //Tipi di messaggi
@@ -78,17 +78,15 @@ typedef enum {
     MSG_GRENADE_RIGHT,
     MSG_CROC_UPDATE,
     MSG_CROC_PROJECTILE,
+    MSG_CROC_SPAWN,
+    MSG_CROC_DESPAWN,
 } MessageType;
 
-typedef struct{
-    int lane;
-    int croc_index;
-}Croc_id;
 
 //Struttura del messaggio inviato
 typedef struct {
     MessageType type;
-    Croc_id id; // 0 per la rana
+    int id; // 0 per la rana
     Entity entity;
 } Message;
 

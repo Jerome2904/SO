@@ -6,17 +6,20 @@
 
 typedef struct {
     CircularBuffer *buffer;
-    WINDOW* game_win;
     RiverLane* lane;
-    int offset;
-    int index;
 } CrocodileArgs;
 
+typedef struct{
+    CircularBuffer *buffer;
+    RiverLane* lane;
+}LaneArgs;
+
 void init_lanes(RiverLane lanes[]);
+void *lane_thread(void *arg);
 void *crocodile_thread(void *arg);
 void draw_crocodile(WINDOW *win, Entity *crocodile);
 void clear_crocodile(WINDOW *win, Entity *crocodile);
-void crocodile_init(Entity *crocodile, RiverLane *lane,int offset);
+void crocodile_init(Entity *crocodile, RiverLane *lane);
 void *crocodile_projectile_thread(void *arg);
 
 #endif

@@ -8,10 +8,11 @@ Hole tane[NUM_HOLES];
 
 // Inizializza la mappa
 void init_bckmap(){
-    init_pair(2,COLOR_BLACK,COLOR_GREEN);//PRATO
-    init_pair(3,COLOR_BLACK,COLOR_BLUE);//ACQUA
-    init_pair(4,COLOR_BLACK,COLOR_YELLOW);//TANA LIBERA
-    init_pair(5,COLOR_BLACK,COLOR_RED);//TANA OCCUPATA
+    init_pair(2,COLOR_WHITE,COLOR_GREEN);//PRATO
+    init_pair(3,COLOR_WHITE,COLOR_BLUE);//ACQUA
+    init_pair(4,COLOR_WHITE,COLOR_YELLOW);//TANA LIBERA
+    init_pair(5,COLOR_WHITE,COLOR_RED);//TANA OCCUPATA
+    init_pair(6,COLOR_GREEN,COLOR_BLUE);//COCCODRILLO
 
     //associo alla matrice map il valore del color pair apposito
     for(int y = 0; y < MAP_HEIGHT;y++){
@@ -90,15 +91,10 @@ int check_hole_reached(Entity *frog) {
 // Aggiorna la mappa per indicare che la tana è stata occupata
 void hole_update(WINDOW *win,int hole_index) {
     tane[hole_index].occupied = true;
-    
-    for (int dy = 0; dy < FROG_HEIGHT; dy++) {
-        for (int dx = 0; dx < FROG_WIDTH; dx++) {
-            map[tane[hole_index].y + dy][tane[hole_index].x + dx] = 5;
-        }
-    }
     // Ridisegna la tana nella finestra 
     for (int dy = 0; dy < FROG_HEIGHT; dy++) {
         for (int dx = 0; dx < FROG_WIDTH; dx++) {
+            map[tane[hole_index].y + dy][tane[hole_index].x + dx] = 5;
             wattron(win, COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
             mvwaddch(win, tane[hole_index].y + dy, tane[hole_index].x + dx, ' ');
             wattroff(win, COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
