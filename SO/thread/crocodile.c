@@ -8,14 +8,14 @@ void init_lanes(RiverLane lanes[]) {
     
     // First lane direction is random
     lanes[0].direction = (rand() % 2 == 0) ? 1 : -1;
-    lanes[0].speed = 120000;
+    lanes[0].speed = 200000;
     lanes[0].y = MAP_HEIGHT - 7;
     lanes[0].index = 0;
     
     // Alternate directions for subsequent lanes
     for (int i = 1; i < NUM_RIVER_LANES; i++) {
         lanes[i].direction = -lanes[i-1].direction;
-        lanes[i].speed = lanes[i-1].speed - 5000;
+        lanes[i].speed = lanes[i-1].speed - 10000;
         lanes[i].y = lanes[i-1].y - FROG_HEIGHT;
         lanes[i].index = i;
     }
@@ -30,7 +30,7 @@ void* lane_thread(void* arg){
     msg.type = MSG_CROC_SPAWN;
     msg.id = lane->index;
 
-    int delay= rand()% 3 + 3;//i coccodrilli vengono spawnati ogni 3-6 secondi
+    int delay= rand()% 7 + 4;//i coccodrilli vengono spawnati ogni 3-6 secondi
 
     while (1){
     // Check if the game is paused or quitting
@@ -89,8 +89,8 @@ void crocodile_init(Entity *crocodile, RiverLane *lane) {
 
     // Crocodile sprite
     char sprite[CROCODILE_HEIGHT][CROCODILE_WIDTH] = {
-        {'<', 'R', 'R', 'R', 'R', '>'},
-        {'<', 'R', 'R', 'R', 'R', '>'}
+        {'<', 'R', 'R', 'R', 'R','R','R','R','>'},
+        {'<', 'R', 'R', 'R', 'R','R','R','R','>'}
     };
 
     for (int i = 0; i < CROCODILE_HEIGHT; i++) {
@@ -170,8 +170,8 @@ void *crocodile_projectile_thread(void *arg) {
 }
 
 void draw_crocodile(WINDOW *win, Entity *crocodile) {
-    for (int i = 0; i < CROCODILE_HEIGHT; i++) {
-        for (int j = 0; j < CROCODILE_WIDTH; j++) {
+    for (int i = 0; i < crocodile->height; i++) {
+        for (int j = 0; j < crocodile->width - 1; j++) {
             if(crocodile->y + i < MAP_HEIGHT && crocodile->y + i > 0 &&
                 crocodile->x + j < MAP_WIDTH - 1 && crocodile->x + j > 0){
                     wattron(win, COLOR_PAIR(6));
@@ -180,15 +180,12 @@ void draw_crocodile(WINDOW *win, Entity *crocodile) {
                 }
         }
     }
-    
-    pthread_mutex_lock(&render_mutex);
     wrefresh(win);
-    pthread_mutex_unlock(&render_mutex);
 }
 
 void clear_crocodile(WINDOW *win, Entity *crocodile) {
-    for (int i = 0; i < CROCODILE_HEIGHT; i++) {
-        for (int j = 0; j < CROCODILE_WIDTH; j++) {
+    for (int i = 0; i < crocodile->height; i++) {
+        for (int j = 0; j < crocodile->width; j++) {
             if(crocodile->y + i < MAP_HEIGHT && crocodile->y + i > 0 &&
                 crocodile->x + j < MAP_WIDTH - 1 && crocodile->x + j > 0){
                     wattron(win, COLOR_PAIR(6));
@@ -197,7 +194,5 @@ void clear_crocodile(WINDOW *win, Entity *crocodile) {
                 }
         }
     }
-    pthread_mutex_lock(&render_mutex);
     wrefresh(win);
-    pthread_mutex_unlock(&render_mutex);
 }

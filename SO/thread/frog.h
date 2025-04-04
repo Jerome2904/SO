@@ -8,6 +8,7 @@ typedef struct {
     WINDOW *win;
 } FrogArgs;
 
+
 void frog_init(Entity *frog);
 void draw_frog(WINDOW *game_win, Entity *frog);
 void clear_frog(WINDOW *game_win, Entity *frog);

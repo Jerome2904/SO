@@ -28,7 +28,7 @@
 //Dimensioni Corsie e Coccodrilli
 #define NUM_RIVER_LANES 13
 #define NUM_CROC 6
-#define CROCODILE_WIDTH 6
+#define CROCODILE_WIDTH 10
 #define CROCODILE_HEIGHT 2
 
 // Parametri di gioco
@@ -80,6 +80,7 @@ typedef enum {
     MSG_CROC_PROJECTILE,
     MSG_CROC_SPAWN,
     MSG_CROC_DESPAWN,
+    MSG_GRENADE_SPAWN,
 } MessageType;
 
 

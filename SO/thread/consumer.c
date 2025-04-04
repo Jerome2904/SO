@@ -5,6 +5,7 @@
 #include "frog.h"
 #include "map.h"
 #include "grenade.h"
+#include "list.h"
 
 // Helper per forzare le entità all'interno della mappa
 void clamp_entity(Entity *entity) {
@@ -21,22 +22,17 @@ void *consumer_thread(void *arg) {
     CircularBuffer *buffer = args->buffer;
     WINDOW *game_win = args->game_win;
     WINDOW *info_win = args->info_win;
-
+    int i;
     Entity frog;
     frog_init(&frog);
+    bool onwater;
     Entity grenade_left, grenade_right;
 
-    RiverLane lanes[NUM_RIVER_LANES];
-    init_lanes(lanes);
-    
-    //Ricicliamo i buffer circolari per gestire spawn e despawn dei singoli coccodrilli nelle corsie
-    CircularBuffer *lane_queue[NUM_RIVER_LANES];
-    for (int i = 0; i < NUM_RIVER_LANES; i++)
-    {
-        lane_queue[i]=malloc(sizeof(CircularBuffer));
-        buffer_init(lane_queue[i]);
+    // Use lists instead of circular buffers for lanes
+    List lane_list[NUM_RIVER_LANES];
+    for (i = 0; i < NUM_RIVER_LANES; i++) {
+        list_init(&lane_list[i]);
     }
-    
     
     Message msg;
     
@@ -68,19 +64,148 @@ void *consumer_thread(void *arg) {
         switch (msg.type) {
             case MSG_FROG_UPDATE:
                 clear_frog(game_win,&frog);
-                frog = msg.entity;
-                // Se la rana raggiunge la riga delle tane, controlla se è in una tana libera
-                if (frog.y == HOLE_Y) {
-                    hole_index = check_hole_reached(&frog);
-                    if (hole_index != -1) {
-                        hole_update(game_win,hole_index);
-                        holes_reached++;
-                        update_score(time * 100);
-                        time = ROUND_TIME;
-                        reset_round();
-                        frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
-                        frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
-                    }
+                switch (msg.id){
+                    case KEY_UP:
+                    //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
+                        if(frog.y > HOLE_Y){
+                            frog.y -= VERTICAL_JUMP;
+
+                            //se la rana si trova nella sezione acquatica, controlliamo che si trovi sopra un coccodrillo.
+                            if(frog.y<=MAP_HEIGHT - 7 && frog.y > ((MAP_HEIGHT-7)-(2*NUM_RIVER_LANES)) ){
+                                if(frog.y==MAP_HEIGHT - 7){
+                                    lane_idx=0;
+                                }else{
+                                    lane_idx++;
+                                }
+                                
+                                onwater=true;
+                                ListNode* current = lane_list[lane_idx].head;
+                                while (current != NULL) {
+                                    if(frog.x>=current->data.entity.x && frog.x+1<=current->data.entity.x+CROCODILE_WIDTH){
+                                        onwater=false;
+                                        break;
+                                    }
+                                    current = current->next;
+                                }
+
+                                if(onwater){
+                                    lane_idx=-1;
+                                    lives--;
+                                    frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                    frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                    time=ROUND_TIME;
+                                    onwater=false;
+                                    break;
+                                }
+                            }
+
+                            
+                            if (frog.y == HOLE_Y) {
+                                // se la rana si trova nella stessa colonna di una tana può entrare
+                                if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
+                                    frog.y = HOLE_Y; // Enta nella tana 
+                                    int hole_index = check_hole_reached(&frog);
+                                    if (!tane[hole_index].occupied&&hole_index!=-1){
+                                        hole_update(game_win,hole_index);
+                                        holes_reached++;
+                                        update_score(time * 100);
+                                        time = ROUND_TIME;
+                                        reset_round();
+                                        frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                        frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                        } 
+                                } else{
+                                    frog.y += VERTICAL_JUMP; 
+                                }
+                            }
+                        }
+                        
+                        break;
+                    case KEY_DOWN:
+                        if(frog.y<MAP_HEIGHT-FROG_HEIGHT-1){
+                            frog.y += VERTICAL_JUMP;
+
+                            //se la rana si trova nella sezione acquatica, controlliamo che si trovi sopra un coccodrillo.
+                            if(frog.y<=MAP_HEIGHT - 7 && frog.y>=((MAP_HEIGHT-7)-(2*NUM_RIVER_LANES))){
+                                lane_idx--;
+                                
+                                onwater=true;
+                                ListNode* current = lane_list[lane_idx].head;
+                                while (current != NULL) {
+                                    if(frog.x>=current->data.entity.x &&  
+                                        frog.x+1<=current->data.entity.x+CROCODILE_WIDTH){
+                                        onwater=false;
+                                        break;
+                                    }
+                                    current = current->next;
+                                }
+
+                                if(onwater){
+                                    lane_idx=-1;
+                                    lives--;
+                                    frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                    frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                    time=ROUND_TIME;
+                                    break;
+                                }
+                            }
+
+                            }
+                        break;
+                    case KEY_LEFT:
+                        if(frog.x>FROG_WIDTH){
+                            frog.x -= 1;
+                            //se la rana si trova nella sezione acquatica, controlliamo che si trovi sopra un coccodrillo.
+                            if(frog.y<=MAP_HEIGHT - 7 && frog.y>((MAP_HEIGHT-7)-(2*NUM_RIVER_LANES))){
+                                onwater=true;
+                                ListNode* current = lane_list[lane_idx].head;
+                                while (current != NULL) {
+                                    if(frog.x>=current->data.entity.x &&  
+                                        frog.x+1<=current->data.entity.x+CROCODILE_WIDTH){
+                                        onwater=false;
+                                        break;
+                                    }
+                                    current = current->next;
+                                }
+
+                                if(onwater){
+                                    lane_idx=-1;
+                                    lives--;
+                                    frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                    frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                    time=ROUND_TIME;
+                                    break;
+                                }
+                            }
+                            }
+                        break;
+                    case KEY_RIGHT:
+                        if(frog.x<MAP_WIDTH-FROG_WIDTH-1){
+                            frog.x += 1;
+                            //se la rana si trova nella sezione acquatica, controlliamo che si trovi sopra un coccodrillo.
+                            if(frog.y<=MAP_HEIGHT - 7 && frog.y>((MAP_HEIGHT-7)-(2*NUM_RIVER_LANES))){
+                                onwater=true;
+                                ListNode* current = lane_list[lane_idx].head;
+                                while (current != NULL) {
+                                    if(frog.x>=current->data.entity.x &&  
+                                        frog.x+1<=current->data.entity.x+CROCODILE_WIDTH){
+                                        onwater=false;
+                                        break;
+                                    }
+                                    current = current->next;
+                                }
+
+                                if(onwater){
+                                    lane_idx=-1;
+                                    lives--;
+                                    frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                    frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                    time=ROUND_TIME;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
                 }
                 draw_frog(game_win, &frog);
                 break;
@@ -104,44 +229,84 @@ void *consumer_thread(void *arg) {
                 draw_grenade(game_win,&grenade_right);
                 break;
 
+            case MSG_GRENADE_SPAWN:
+                pthread_mutex_lock(&grenade_mutex);
+                if (active_grenades == 0) {
+                    pthread_t grenade_left_tid, grenade_right_tid;
+                    
+                    // Create left grenade
+                    GrenadeArgs *grenade_args_left = malloc(sizeof(GrenadeArgs));
+                    grenade_args_left->buffer = buffer;
+                    grenade_args_left->start_x = frog.x - 1;
+                    grenade_args_left->start_y = frog.y;
+                    grenade_args_left->dx = -1;
+                    grenade_args_left->speed = 40000;
+                    
+                    // Create right grenade
+                    GrenadeArgs *grenade_args_right = malloc(sizeof(GrenadeArgs));
+                    grenade_args_right->buffer = buffer;
+                    grenade_args_right->start_x = frog.x + FROG_WIDTH;
+                    grenade_args_right->start_y = frog.y;
+                    grenade_args_right->dx = 1;
+                    grenade_args_right->speed = 40000;
+
+                    pthread_create(&grenade_left_tid, NULL, grenade_thread, grenade_args_left);
+                    pthread_create(&grenade_right_tid, NULL, grenade_thread, grenade_args_right);
+                    pthread_detach(grenade_left_tid);
+                    pthread_detach(grenade_right_tid);
+                }
+                pthread_mutex_unlock(&grenade_mutex);
+                break;
 
             case MSG_CROC_UPDATE:
-                // Find the crocodile in the lane queue (using a more reliable method)
-                int found = 0;
-                int buff_idx = lane_queue[msg.id]->out;
-                for (int i = 0; i < lane_queue[msg.id]->count; i++) {
-                    // Using a more forgiving position match
-                    if (abs(msg.entity.x - lane_queue[msg.id]->buffer[buff_idx].entity.x) <= 1) {
-                        clear_crocodile(game_win, &lane_queue[msg.id]->buffer[buff_idx].entity);
-                        lane_queue[msg.id]->buffer[buff_idx] = msg;
-                        draw_crocodile(game_win, &lane_queue[msg.id]->buffer[buff_idx].entity);
-                        found = 1;
+                // Find the crocodile in the lane list
+                ListNode* current = lane_list[msg.id].head;
+                ListNode* prev = NULL;
+                bool found = false;
+
+                while (current != NULL) {
+                    if (abs(msg.entity.x - current->data.entity.x) <= 1) {
+                        clear_crocodile(game_win, &current->data.entity);
+                        current->data = msg;
+                        draw_crocodile(game_win, &current->data.entity);
+                        
+                        if(frog.x>=msg.entity.x && frog.x+FROG_WIDTH<=msg.entity.x+CROCODILE_WIDTH && frog.y==msg.entity.y){
+                            clear_frog(game_win,&frog);
+                            frog.x += msg.entity.dx;
+                            if (frog.x==0 || frog.x+FROG_WIDTH==MAP_WIDTH){
+                                lives--;
+                                frog.x = (MAP_WIDTH - FROG_WIDTH ) / 2 ;
+                                frog.y = MAP_HEIGHT - FROG_HEIGHT - 1;
+                                time=ROUND_TIME;
+                            }
+                            draw_frog(game_win,&frog);
+                        }
+                        found = true;
                         break;
                     }
-                    buff_idx = (buff_idx + 1) % BUFFER_SIZE;
+                    prev = current;
+                    current = current->next;
                 }
-                // If not found, it might be a new crocodile, so add it
-                if (!found && lane_queue[msg.id]->count < BUFFER_SIZE) {
-                    buffer_push(lane_queue[msg.id], msg);
+
+                // If not found, add as new crocodile
+                if (!found) {
+                    list_push(&lane_list[msg.id], msg);
                     draw_crocodile(game_win, &msg.entity);
                 }
                 break;
             case MSG_CROC_DESPAWN:
-                // Remove the crocodile from the lane queue
-                if (lane_queue[msg.id]->count > 0) {
-                    Message removed_croc = buffer_pop(lane_queue[msg.id]);
+                // Remove the crocodile from the lane list
+                if (lane_list[msg.id].count > 0) {
+                    Message removed_croc = list_pop(&lane_list[msg.id]);
                     clear_crocodile(game_win, &removed_croc.entity);
                 }
                 break;
                 
         }
         if (lives <= 0 || holes_reached == NUM_HOLES) {
-            if (holes_reached == NUM_HOLES){
-                pthread_mutex_lock(&game_state_mutex);
-                game_state = GAME_WIN;
-                pthread_mutex_unlock(&game_state_mutex);
-            }
-            break;
+            pthread_mutex_lock(&game_state_mutex);
+            game_state = GAME_WIN;
+            pthread_mutex_unlock(&game_state_mutex);
         }
         pthread_mutex_lock(&render_mutex);
         mvwprintw(info_win, 1, 1, "Lives: %-25d Score: %-25d Time:%4d", lives, score, time);
@@ -152,6 +317,12 @@ void *consumer_thread(void *arg) {
     wrefresh(info_win);
     werase(game_win);
     wrefresh(game_win);
+
+    // Clean up
+    for (i = 0; i < NUM_RIVER_LANES; i++) {
+        list_free(&lane_list[i]);
+    }
+
     return NULL;
 }
 
