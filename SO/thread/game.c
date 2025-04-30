@@ -2,6 +2,7 @@
 #include "crocodile.h"
 #include "frog.h"
 #include "consumer.h"
+#include "time.h"
 #include "timer.h"
 #include "buffer.h"
 #include "map.h"
@@ -10,15 +11,13 @@
 int round_reset_flag = 0;
 pthread_mutex_t reset_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int active_grenades = 0;
-pthread_mutex_t grenade_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 int game_state = GAME_RUNNING;
 pthread_mutex_t game_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int score = INITIAL_SCORE;
 
 void start_game() {
+    srand(time(NULL));
     // Inizializzo la finestra di gioco
     int game_starty = (LINES - MAP_HEIGHT) / 2;
     int game_startx = (COLS - MAP_WIDTH) / 2;
@@ -39,33 +38,31 @@ void start_game() {
     CircularBuffer buffer;
     buffer_init(&buffer);
 
-    // Argomenti per i thread
-    ConsumerArgs consumer_args = {&buffer, game_win, info_win};
-    FrogArgs frog_args = {&buffer, game_win};
-    TimerArgs timer_args = {&buffer};
-
-    pthread_t frog_tid, consumer_tid,timer_tid;
-
-    
+    // Inizializzo le corsie
     RiverLane lanes[NUM_RIVER_LANES];
     init_lanes(lanes);
 
-    pthread_t lane_tid[NUM_RIVER_LANES];
-    LaneArgs lane_args[NUM_RIVER_LANES];
-    for (int i = 0; i < NUM_RIVER_LANES; i++)
-    {
-        lane_args[i].buffer=&buffer;
-        lane_args[i].lane =&lanes[i];
-        pthread_create(&lane_tid[i], NULL, lane_thread, &lane_args[i]);
-    }
-    
+    // Argomenti per i thread
+    ConsumerArgs consumer_args = {&buffer, game_win, info_win,lanes};
+    FrogArgs frog_args = {&buffer, game_win};
+    TimerArgs timer_args = {&buffer};
 
+    pthread_t frog_tid, consumer_tid, timer_tid;
     // Creazione dei thread
     pthread_create(&frog_tid, NULL, frog_thread, &frog_args);
     pthread_create(&timer_tid, NULL, timer_thread, &timer_args);
     pthread_create(&consumer_tid, NULL, consumer_thread, &consumer_args);
 
-    
+    // Spawn coccodrilli iniziali.
+    for (int i = 0; i < NUM_RIVER_LANES; i++) {
+        pthread_t croc_tid;
+        CrocodileArgs* croc_args = malloc(sizeof(CrocodileArgs));
+        croc_args->buffer = &buffer;
+        croc_args->lane = &lanes[i];
+        pthread_create(&croc_tid, NULL, crocodile_thread, croc_args);
+        pthread_detach(croc_tid);
+    }
+
     pthread_join(consumer_tid, NULL);
     pthread_join(frog_tid, NULL);
     pthread_join(timer_tid, NULL);
@@ -152,10 +149,6 @@ void restart_game() {
     pthread_mutex_lock(&reset_mutex);
     round_reset_flag = 0;
     pthread_mutex_unlock(&reset_mutex);
-    
-    pthread_mutex_lock(&grenade_mutex);
-    active_grenades = 0;
-    pthread_mutex_unlock(&grenade_mutex);
     
     pthread_mutex_lock(&game_state_mutex);
     game_state = GAME_RUNNING;

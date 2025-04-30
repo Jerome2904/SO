@@ -7,11 +7,20 @@ void *grenade_thread(void* arg){
     GrenadeArgs *args = (GrenadeArgs*) arg;
     CircularBuffer *buffer = args->buffer;
     Message msg;
-    
+    msg.id=0;
+
+
     msg.entity.width = 1;
     msg.entity.height = 1;
     msg.entity.type = ENTITY_GRENADE;
     msg.entity.dx = args->dx;
+    msg.entity.speed=args->speed;
+    msg.entity.impacted=false;
+    
+    msg.entity.cooldown=-1;
+    msg.entity.is_badcroc=false;
+    msg.entity.sprite[0][0]='*';
+
     if(msg.entity.dx==-1){
         msg.type = MSG_GRENADE_LEFT;
     }else{
@@ -21,10 +30,6 @@ void *grenade_thread(void* arg){
     msg.entity.x = args->start_x;
     msg.entity.y = args->start_y;
 
-
-    pthread_mutex_lock(&grenade_mutex);
-    active_grenades++;
-    pthread_mutex_unlock(&grenade_mutex);
 
     // Aggiorna la posizione finché non raggiunge il bordo sinistro
     while (msg.entity.x > 0 && msg.entity.x < MAP_WIDTH) {
@@ -48,12 +53,11 @@ void *grenade_thread(void* arg){
         buffer_push(buffer, msg);
     }
 
-    pthread_mutex_lock(&grenade_mutex);
-    active_grenades--;
-    pthread_mutex_unlock(&grenade_mutex);
+    msg.id=-1;
+    buffer_push(buffer, msg);
+
     
-    free(args);
-    return NULL;
+    pthread_exit(NULL);
 }
 
 // Disegna la granata sullo schermo
@@ -62,9 +66,7 @@ void draw_grenade(WINDOW *win, Entity *grenade) {
         wattron(win,COLOR_PAIR(map[grenade->y][grenade->x]));
         mvwaddch(win,grenade->y, grenade->x, '*');
         wattroff(win,COLOR_PAIR(map[grenade->y][grenade->x]));
-        pthread_mutex_lock(&render_mutex);
         wrefresh(win);
-        pthread_mutex_unlock(&render_mutex);
     }
     
 }
@@ -73,8 +75,6 @@ void clear_grenade(WINDOW *win, Entity *grenade) {
         wattron(win,COLOR_PAIR(map[grenade->y][grenade->x]));
         mvwaddch(win,grenade->y, grenade->x, ' ');
         wattroff(win,COLOR_PAIR(map[grenade->y][grenade->x]));
-        pthread_mutex_lock(&render_mutex);
         wrefresh(win);
-        pthread_mutex_unlock(&render_mutex);
     }
 }

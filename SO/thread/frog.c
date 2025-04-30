@@ -6,16 +6,16 @@
 #include "grenade.h"
 
 
+
 void *frog_thread(void *arg) {
     FrogArgs *args = (FrogArgs *)arg;
     CircularBuffer *buffer = args->buffer;
     WINDOW *game_win = args->win;
+    nodelay(game_win,FALSE);
     Entity frog;
     frog_init(&frog);
     int ch;
     Message msg;
-    bool can_shoot;
-    pthread_t grenade_left_tid, grenade_right_tid;
     int old_x, old_y;
 
     msg.type = MSG_FROG_UPDATE;
@@ -59,79 +59,23 @@ void *frog_thread(void *arg) {
             pthread_mutex_unlock(&game_state_mutex);
             continue; 
         }
-        // Cambia posizione della rana solo se il gioco non è in pausa
-        if (game_state != GAME_PAUSED){
-            switch (ch) {
-                case KEY_UP:
-                    //la rana puo andare sempre verso su fin quando non arriva al bordo della tana
-                    if(frog.y > HOLE_Y){
-                        frog.y -= VERTICAL_JUMP;
-                        
-                        if (frog.y == HOLE_Y) {
-                            // se la rana si trova nella stessa colonna di una tana può entrare
-                            if (frog.x == HOLE_X1 || frog.x == HOLE_X2 || frog.x == HOLE_X3 || frog.x == HOLE_X4 || frog.x == HOLE_X5) {
-                                frog.y = HOLE_Y; // Enta nella tana 
-
-                                int hole_index = check_hole_reached(&frog);
-                                if (tane[hole_index].occupied){
-                                    frog.y += VERTICAL_JUMP;// Se la tana è già stata raggiunta, non è più possibile entrare
-                                    } 
-                            } 
-                            else{
-                                frog.y += VERTICAL_JUMP; 
-                            }
-                            
-                    }
-                    }
-                    
-                    break;
-                case KEY_DOWN:
-                    if(frog.y<MAP_HEIGHT-FROG_HEIGHT-1){
-                        frog.y += VERTICAL_JUMP;
-                        }
-                    break;
-                case KEY_LEFT:
-                    if(frog.x>FROG_WIDTH){
-                        frog.x -= HORIZONTAL_JUMP;
-                        }
-                    break;
-                case KEY_RIGHT:
-                    if(frog.x<MAP_WIDTH-FROG_WIDTH-1){
-                        frog.x += HORIZONTAL_JUMP;
-                    }
-                    break;
-                case ' ':
-                    pthread_mutex_lock(&grenade_mutex);
-                    can_shoot=(active_grenades==0);
-                    pthread_mutex_unlock(&grenade_mutex);
-                    if(can_shoot){
-                    // Allocazione dinamica dei parametri
-                    GrenadeArgs *grenade_args_left = malloc(sizeof(GrenadeArgs));
-                    grenade_args_left->buffer = buffer;
-                    grenade_args_left->start_x = frog.x-1;
-                    grenade_args_left->start_y = frog.y;
-                    grenade_args_left->dx = -1;
-                    grenade_args_left->speed = 40000;
-                    
-                    GrenadeArgs *grenade_args_right = malloc(sizeof(GrenadeArgs));
-                    grenade_args_right->buffer = buffer;
-                    grenade_args_right->start_x = frog.x + frog.width;
-                    grenade_args_right->start_y = frog.y;
-                    grenade_args_right->dx = 1;
-                    grenade_args_right->speed = 40000;
-
-                    pthread_create(&grenade_left_tid, NULL, grenade_thread, grenade_args_left);
-                    pthread_create(&grenade_right_tid, NULL, grenade_thread, grenade_args_right);
-                    pthread_detach(grenade_left_tid);
-                    pthread_detach(grenade_right_tid);
-                    }
-                    break;
-
+        //INVIA UN MEX AL CONSUMER CHE DICE COSA FARE
+        if(game_state != GAME_PAUSED){
+            switch (ch){
+            case KEY_UP:
+            case KEY_DOWN:
+            case KEY_LEFT:
+            case KEY_RIGHT:
+                msg.type=MSG_FROG_UPDATE;
+                msg.id=ch;
+                break;
+            case ' ':
+                msg.type = MSG_GRENADE_SPAWN;
+                msg.id = 0;  // Not used for grenades
+                msg.entity = frog;  // Pass frog position for grenade spawn
+                break;
             }
-            if(old_x != frog.x || old_y != frog.y){
-                msg.entity = frog;
-                buffer_push(buffer, msg);
-            }
+            buffer_push(buffer, msg);
         }
     }
     return NULL;
@@ -143,6 +87,13 @@ void frog_init(Entity *frog) {
     frog->width = FROG_WIDTH;
     frog->height = FROG_HEIGHT;
     frog->type = ENTITY_FROG;
+
+    frog->impacted=false;
+    frog->cooldown=-1;
+    frog->is_badcroc=false;
+    frog->dx=0;
+    frog->speed=0;
+    
     // Forma della rana
     char sprite[FROG_HEIGHT][FROG_WIDTH] = {
         {'v', 'O', 'v'},
@@ -160,16 +111,14 @@ void frog_init(Entity *frog) {
 
 // Disegna la rana sullo schermo
 void draw_frog(WINDOW *win, Entity *frog) {
-    for (int i = 0; i < frog->height; i++) {
-        for (int j = 0; j < frog->width; j++) {
+    for (int i = 0; i < FROG_HEIGHT; i++) {
+        for (int j = 0; j < FROG_WIDTH; j++) {
             wattron(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
             mvwaddch(win,frog->y + i, frog->x + j, frog->sprite[i][j]);
             wattroff(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
         }
     }
-    pthread_mutex_lock(&render_mutex);
     wrefresh(win);
-    pthread_mutex_unlock(&render_mutex);
 }
 void clear_frog(WINDOW *win, Entity *frog) {
     for (int i = 0; i < frog->height; i++) {
@@ -179,7 +128,5 @@ void clear_frog(WINDOW *win, Entity *frog) {
             wattroff(win,COLOR_PAIR(map[frog->y + i][frog->x + j]));
         }
     }
-    pthread_mutex_lock(&render_mutex);
     wrefresh(win);
-    pthread_mutex_unlock(&render_mutex);
 }

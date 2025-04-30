@@ -17,7 +17,7 @@
 #define NUM_OPTIONS 3
 
 //Dimensioni del buffer condiviso
-#define BUFFER_SIZE 32
+#define BUFFER_SIZE 64
 
 //Dimensioni e salti della rana
 #define FROG_WIDTH 3
@@ -28,7 +28,7 @@
 //Dimensioni Corsie e Coccodrilli
 #define NUM_RIVER_LANES 13
 #define NUM_CROC 6
-#define CROCODILE_WIDTH 6
+#define CROCODILE_WIDTH 10
 #define CROCODILE_HEIGHT 2
 
 // Parametri di gioco
@@ -61,6 +61,9 @@ typedef struct {
     int dx; // direzione
     int speed;
     char sprite[SPRITE_ROWS][SPRITE_COLS];
+    bool is_badcroc;
+    bool impacted;//serve per quando i proiettili rana o coccodrilli fanno una collisione.
+    int cooldown;
 } Entity;
 
 typedef struct{
@@ -68,6 +71,8 @@ typedef struct{
     int direction;
     int speed;
     int index;
+    int movements;
+    int movements_to_spawn;
 }RiverLane;
 
 //Tipi di messaggi
@@ -80,6 +85,7 @@ typedef enum {
     MSG_CROC_PROJECTILE,
     MSG_CROC_SPAWN,
     MSG_CROC_DESPAWN,
+    MSG_GRENADE_SPAWN,
 } MessageType;
 
 
@@ -113,9 +119,6 @@ typedef enum {
 
 extern int round_reset_flag;
 extern pthread_mutex_t reset_mutex;
-
-extern int active_grenades;
-extern pthread_mutex_t grenade_mutex;
 
 extern int game_state;
 extern pthread_mutex_t game_state_mutex;
