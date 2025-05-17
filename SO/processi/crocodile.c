@@ -60,9 +60,28 @@ void crocodile_process(int fd_write, RiverLane lane) {
     msg.entity = croc;
     write(fd_write, &msg, sizeof(msg));
 
+    bool has_shot = false;
     //manda posizione del coccodrillo finchè non esce dallo schermo
     msg.type = MSG_CROC_UPDATE;
     while ((croc.dx > 0 && croc.x < MAP_WIDTH) ||(croc.dx < 0 && croc.x + croc.width > 0)) {
+        //1% di probabilità di sparare un proiettile
+        if (!has_shot && (rand() % 100) < 1) {
+            Message pmsg;
+            pmsg.type    = MSG_PROJECTILE_SPAWN;
+            pmsg.lane_id = lane.index;   
+            pmsg.id = my_pid;
+            //posizione di partenza del proiettile
+            if (croc.dx > 0) {
+                pmsg.entity.x = croc.x + croc.width;
+            } else {
+                pmsg.entity.x = croc.x - 1;
+            }
+            pmsg.entity.y = croc.y;
+            pmsg.entity.dx = croc.dx;
+            write(fd_write, &pmsg, sizeof(pmsg));
+            //impedisco di sparare più volte
+            has_shot = true;
+        }
         msg.entity = croc;
         write(fd_write, &msg, sizeof(msg));
 
@@ -77,4 +96,55 @@ void crocodile_process(int fd_write, RiverLane lane) {
 
 
     exit(0);
+}
+
+void projectile_process(int fd_write,int start_x, int start_y, int dx) {
+    Message msg;
+    Entity projectile;
+    projectile.type = ENTITY_PROJECTILE;
+    projectile.width = 1;
+    projectile.height = 1;
+    projectile.x = start_x;
+    projectile.y = start_y;
+    projectile.dx = dx;
+    projectile.speed = 40000;
+    projectile.sprite[0][0] = '=';
+    pid_t my_pid = getpid();
+
+    //manda posizione della granata finchè non esce dallo schermo
+    msg.type = MSG_PROJECTILE_UPDATE;
+    while ((projectile.dx > 0 && projectile.x < MAP_WIDTH) ||(projectile.dx < 0 && projectile.x + projectile.width > 0)) {
+        msg.type   = MSG_PROJECTILE_UPDATE;
+        msg.entity = projectile;
+        msg.id = my_pid;
+        write(fd_write, &msg, sizeof(msg));
+
+        projectile.x += projectile.dx;
+        usleep(projectile.speed);
+    }
+
+    //messaggio di despawn
+    msg.type   = MSG_PROJECTILE_DESPAWN;
+    msg.entity = projectile;
+    msg.id = my_pid;
+    write(fd_write, &msg, sizeof(msg));
+
+
+    exit(0);
+}
+
+void draw_projectile(Entity *projectile) {
+    if (projectile->x >= 0 && projectile->x < MAP_WIDTH && projectile->y >= 0 && projectile->y < MAP_HEIGHT) {
+        attron(COLOR_PAIR(map[projectile->y][projectile->x]));
+        mvaddch(projectile->y, projectile->x, projectile->sprite[0][0]);
+        attroff(COLOR_PAIR(map[projectile->y][projectile->x]));
+    }
+}
+
+void clear_projectile(Entity *projectile) {
+    if (projectile->x >= 0 && projectile->x < MAP_WIDTH && projectile->y >= 0 && projectile->y < MAP_HEIGHT) {
+        attron(COLOR_PAIR(map[projectile->y][projectile->x]));
+        mvaddch(projectile->y, projectile->x,' ');
+        attroff(COLOR_PAIR(map[projectile->y][projectile->x]));
+    }
 }

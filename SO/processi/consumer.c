@@ -20,6 +20,7 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     int hole_index = -1;
     int holes_reached = 0;
     
+    // stato corsie (coccodrilli)
     CrocLaneState lanes_state[NUM_RIVER_LANES] = {0};
 
     // stato granate
@@ -28,7 +29,14 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     pid_t  gren_pid[MAX_GRENADES]   = {0};
     bool   gren_active[MAX_GRENADES] = {false};
     int active_grenades = 0;
-    
+
+    // stato proiettili
+    Entity  projectiles[MAX_PROJECTILES] = {0};
+    Entity  proj_prev[MAX_PROJECTILES]   = {0};
+    pid_t   proj_pid[MAX_PROJECTILES]    = {0};
+    bool    proj_active[MAX_PROJECTILES] = {false};
+    int     proj_count = 0;
+
     frog_init(&frog);
 
     
@@ -164,7 +172,63 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                     }
                 }
                 break;
-            
+
+            case MSG_PROJECTILE_SPAWN: {
+                //se siamo già al massimo non sparare
+                if (proj_count >= MAX_PROJECTILES) break;
+                //posizione del coccodrillo
+                int cx = msg.entity.x;
+                int cy = msg.entity.y;
+                int dir = msg.entity.dx;
+
+                //fork del processo proiettile
+                pid_t p = fork();
+                if (p < 0) { perror("fork projectile"); exit(EXIT_FAILURE); }
+                if (p == 0) {
+                    close(fd_read);
+                    projectile_process(fd_write, cx, cy, dir);
+                }
+
+                //padre registra il nuovo proiettile nel primo slot libero
+                for (int i = 0; i < MAX_PROJECTILES; i++) {
+                    if (!proj_active[i]) {
+                        proj_active[i]   = true;
+                        proj_pid[i] = p;
+                        proj_prev[i] = msg.entity;
+                        projectiles[i] = msg.entity;
+                        proj_count++;
+                        break;
+                    }
+                }
+                break;
+            }
+            case MSG_PROJECTILE_UPDATE: {
+                id = msg.id;
+                for (int i = 0; i < MAX_PROJECTILES; i++) {
+                    if (proj_active[i] && proj_pid[i] == id) {
+                        clear_projectile(&proj_prev[i]);
+                        projectiles[i] = msg.entity;
+                        draw_projectile(&projectiles[i]);
+                        proj_prev[i] = projectiles[i];
+                        break;
+                    }
+                }
+                break;
+            }
+
+            case MSG_PROJECTILE_DESPAWN: {
+                id = msg.id;
+                for (int i = 0; i < MAX_PROJECTILES; i++) {
+                    if (proj_active[i] && proj_pid[i] == id) {
+                        clear_projectile(&proj_prev[i]);
+                        proj_active[i] = false;
+                        proj_count--;
+                        break;
+                    }
+                }
+                break;
+            }
+
             default:
                 break;
         }

@@ -5,6 +5,8 @@
 
 #define MAX_CROCS_PER_LANE  3
 
+#define MAX_PROJECTILES 10
+
 //struttura per memorizzare lo stato di un coccodrillo in una corsia del fiume
 typedef struct {
     Entity crocs[MAX_CROCS_PER_LANE];
@@ -16,5 +18,10 @@ typedef struct {
 void init_lanes(RiverLane lanes[]);
 void crocodile_process(int fd_write, RiverLane lane);
 void crocodile_init(Entity *crocodile, RiverLane *lane);
+
+void projectile_process(int fd_write,int start_x, int start_y, int dx);
+void draw_projectile(Entity *projectile);
+void clear_projectile(Entity *projectile);
+
 
 #endif
