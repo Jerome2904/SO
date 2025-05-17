@@ -97,9 +97,9 @@ void start_game() {
     }
 
     // Processo padre
-    close(fd[1]); // Chiudi il lato di scrittura della pipe
-    consumer(fd[0],info_win); 
+    consumer(fd[0],fd[1],info_win); 
     close(fd[0]); // Chiudi il lato di lettura della pipe
+    close(fd[1]); // Chiudi il lato di scrittura della pipe
 
     wait(NULL);
     wait(NULL);

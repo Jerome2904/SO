@@ -15,10 +15,27 @@ void frog_process(int fd_write) {
         int ch = getch();
         switch (ch) {
           case KEY_UP:    if (msg.entity.y >= VERTICAL_JUMP) msg.entity.y -= VERTICAL_JUMP; break;
+          
           case KEY_DOWN:  if (msg.entity.y + VERTICAL_JUMP + FROG_HEIGHT <= MAP_HEIGHT) msg.entity.y += VERTICAL_JUMP; break;
+          
           case KEY_LEFT:  if (msg.entity.x >= HORIZONTAL_JUMP) msg.entity.x -= HORIZONTAL_JUMP; break;
+          
           case KEY_RIGHT: if (msg.entity.x + HORIZONTAL_JUMP + FROG_WIDTH <= MAP_WIDTH) msg.entity.x += HORIZONTAL_JUMP; break;
+          
+          case ' ':
+            //quando premi SPAZIO, manda un messaggio di spawn della granata
+            {
+                Message gmsg;
+                gmsg.type = MSG_GRENADE_SPAWN;
+                //parto dalla posizione corrente della rana
+                gmsg.entity.x = msg.entity.x;
+                gmsg.entity.y = msg.entity.y;
+                write(fd_write, &gmsg, sizeof(gmsg));
+            }
+            break;
+
           case 'q': exit(0);
+
           default:   break;
         }
         write(fd_write, &msg, sizeof(msg));

@@ -4,27 +4,44 @@
 #include "map.h"
 #include "timer.h"
 #include "crocodile.h"
+#include "grenade.h"
 
 
-CrocLaneState lanes_state[NUM_RIVER_LANES];
 
-void consumer(int fd_read, WINDOW *info_win) {
+
+
+void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     Message msg;
     Entity frog;
 
     int time = ROUND_TIME;
     int lives = NUM_LIVES;
     int score = INITIAL_SCORE;
+    int hole_index = -1;
+    int holes_reached = 0;
+    
+    CrocLaneState lanes_state[NUM_RIVER_LANES] = {0};
 
+    // stato granate
+    Entity grenades[MAX_GRENADES]   = {0};
+    Entity gren_prev[MAX_GRENADES]  = {0};
+    pid_t  gren_pid[MAX_GRENADES]   = {0};
+    bool   gren_active[MAX_GRENADES] = {false};
+    int active_grenades = 0;
+    
     frog_init(&frog);
+
+    
+    int lane =-1;
+    pid_t id =-1;
+    //tiene lo stato della corsia 
+    CrocLaneState *lane_state = NULL;
+    //direzione della granata
+    int dir = 0;
 
     while (1) {
         if (read(fd_read, &msg, sizeof(msg)) <= 0) break;
-        // Array per coccodrilli
-        int lane = msg.lane_id;
-        pid_t id = msg.id;
-        CrocLaneState *lane_state = &lanes_state[lane];
-
+        
         switch (msg.type) {
             case MSG_TIMER_TICK:
                 time--;
@@ -37,6 +54,10 @@ void consumer(int fd_read, WINDOW *info_win) {
                 break;
 
             case MSG_CROC_SPAWN:
+                lane = msg.lane_id;
+                id = msg.id;
+                lane_state = &lanes_state[lane];
+
                 for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
                     if (!lane_state->active[i]) {
                         lane_state->crocs[i] = msg.entity;
@@ -50,7 +71,10 @@ void consumer(int fd_read, WINDOW *info_win) {
                 break;
 
             case MSG_CROC_UPDATE:
-                // cerca lo slot giusto
+                lane = msg.lane_id;
+                id = msg.id;
+                lane_state = &lanes_state[lane];
+
                 for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
                     if (lane_state->active[i] && lane_state->pid[i] == id) {
                         clear_entity(&lane_state->prev[i]);
@@ -63,6 +87,10 @@ void consumer(int fd_read, WINDOW *info_win) {
                 break;
 
             case MSG_CROC_DESPAWN:
+                lane = msg.lane_id;
+                id = msg.id;
+                lane_state = &lanes_state[lane];
+
                 for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
                     if (lane_state->active[i] && lane_state->pid[i] == id) {
                         clear_entity(&lane_state->prev[i]);
@@ -72,6 +100,70 @@ void consumer(int fd_read, WINDOW *info_win) {
                 }
                 break;
 
+            case MSG_GRENADE_SPAWN: {
+                // se ci sono già 2 granate attive, non spawnarne altre
+                if (gren_active[0] || gren_active[1]) {
+                    break;
+                }
+                //posizione della rana
+                int fx = msg.entity.x, fy = msg.entity.y;
+                // Granata SINISTRA -> slot 0
+                pid_t g0 = fork();
+                if (g0 < 0) {
+                    perror("fork grenade left");
+                    exit(EXIT_FAILURE);
+                }
+                if (g0 == 0) {
+                    close(fd_read);
+                    grenade_process(fd_write, fx, fy, -1);
+                } else {
+                    gren_active[0]  = true;
+                    gren_pid[0]     = g0;
+                    gren_prev[0]    = msg.entity;
+                    grenades[0]     = msg.entity;
+                }
+
+                // Granata DESTRA -> slot 1
+                pid_t g1 = fork();
+                if (g1 < 0) {
+                    perror("fork grenade right");
+                    exit(EXIT_FAILURE);
+                }
+                if (g1 == 0) {
+                    close(fd_read);
+                    grenade_process(fd_write, fx, fy, +1);
+                } else {
+                    gren_active[1]  = true;
+                    gren_pid[1]     = g1;
+                    gren_prev[1]    = msg.entity;
+                    grenades[1]     = msg.entity;
+                }
+                active_grenades = MAX_GRENADES;
+                break;
+            }
+            case MSG_GRENADE_UPDATE:
+                id = msg.id;
+                for (int i = 0; i < MAX_GRENADES; i++) {
+                    if (gren_active[i] && gren_pid[i] == id) {
+                        clear_grenade(&gren_prev[i]);
+                        grenades[i] = msg.entity;
+                        gren_prev[i] = grenades[i];
+                        draw_grenade(&grenades[i]);
+                        break;
+                    }
+                }
+                break;
+
+            case MSG_GRENADE_DESPAWN:
+                id = msg.id;
+                for (int i = 0; i < MAX_GRENADES; i++) {
+                    if (gren_active[i] && gren_pid[i] == id) {
+                        clear_grenade(&gren_prev[i]);
+                        gren_active[i] = false;
+                        break;
+                    }
+                }
+                break;
             
             default:
                 break;

@@ -3,7 +3,7 @@
 
 #include "game.h"
 
-void consumer(int fd_read, WINDOW *info_win);
+void consumer(int fd_read,int fd_write, WINDOW *info_win);
 
 #endif
 
