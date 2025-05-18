@@ -41,11 +41,11 @@ void crocodile_process(int fd_write, RiverLane lane) {
     Entity croc;
     crocodile_init(&croc, &lane);
 
-    // spawn iniziale fuori schermo
+    //spawn iniziale
     if (lane.direction > 0)
-        croc.x = -croc.width;
+        croc.x = 0;
     else
-        croc.x = MAP_WIDTH;
+        croc.x = MAP_WIDTH -croc.width;
 
     Message msg;
 
@@ -65,7 +65,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
 
     while ((croc.dx > 0 && croc.x < MAP_WIDTH) || (croc.dx < 0 && croc.x + croc.width > 0)) {
         //se non ha ancora sparato,valutiamo se far partire il warning
-        if (!has_shot && !prefire_warning && (rand() % 100) < 1) {
+        if (!has_shot && !prefire_warning && (rand() % 100) < 5) {
             prefire_warning = true;
             prefire_timer = 400000;
             //cambia sprite per il warning

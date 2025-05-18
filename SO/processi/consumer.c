@@ -8,6 +8,11 @@
 
 
 void consumer(int fd_read,int fd_write, WINDOW *info_win) {
+    init_bckmap();
+    init_holes_positions();
+    init_map_holes();
+    draw_map();
+
     Message msg;
     Entity frog;
 
@@ -30,16 +35,16 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     // stato granate
     Entity grenades[MAX_GRENADES] = {0};
     Entity gren_prev[MAX_GRENADES] = {0};
-    pid_t  gren_pid[MAX_GRENADES] = {0};
-    bool   gren_active[MAX_GRENADES] = {false};
+    pid_t gren_pid[MAX_GRENADES] = {0};
+    bool gren_active[MAX_GRENADES] = {false};
     int active_grenades = 0;
 
     // stato proiettili
-    Entity  projectiles[MAX_PROJECTILES] = {0};
-    Entity  proj_prev[MAX_PROJECTILES] = {0};
-    pid_t   proj_pid[MAX_PROJECTILES] = {0};
-    bool    proj_active[MAX_PROJECTILES] = {false};
-    int     proj_count = 0;
+    Entity projectiles[MAX_PROJECTILES] = {0};
+    Entity proj_prev[MAX_PROJECTILES] = {0};
+    pid_t proj_pid[MAX_PROJECTILES] = {0};
+    bool proj_active[MAX_PROJECTILES] = {false};
+    int proj_count = 0;
 
     int frog_start_x = (MAP_WIDTH - FROG_WIDTH) / 2;
     int frog_start_y = MAP_HEIGHT - FROG_HEIGHT;
@@ -102,7 +107,7 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                         draw_entity(&lane_state->crocs[i]);
 
                         //drift della rana se è sopra questo coccodrillo
-                        frog_drift_if_on_croc(&frog,&frog_prev,&lane_state->crocs[i]);
+                        frog_drift_on_croc(&frog,&frog_prev,&lane_state->crocs[i]);
 
                         //controllo caduta in acqua anche qui (nel caso in cui il coccodrillo abbia portato la rana fuori dallo schermo)
                         frog_water_check(&frog, &frog_prev,lanes_state,lane_y,&lives,frog_start_x,frog_start_y);
@@ -246,6 +251,9 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
             default:
                 break;
         }
+        
+        check_grenade_projectile_collisions(grenades, gren_prev, gren_active, gren_pid,projectiles, proj_prev, proj_active, proj_pid);
+        clean();
         //la rana sarà sempre visibile
         draw_entity(&frog);
     
@@ -336,7 +344,7 @@ void frog_water_check(Entity *frog, Entity *frog_prev, CrocLaneState lanes_state
     }
 }
 
-void frog_drift_if_on_croc(Entity *frog, Entity *frog_prev, Entity *croc) {
+void frog_drift_on_croc(Entity *frog, Entity *frog_prev, Entity *croc) {
     if (frog->y == croc->y && frog->x >= croc->x && frog->x <  croc->x + croc->width) {
         clear_entity(frog_prev);
         frog->x += croc->dx;
@@ -345,5 +353,31 @@ void frog_drift_if_on_croc(Entity *frog, Entity *frog_prev, Entity *croc) {
         if (frog->x + frog->width > MAP_WIDTH)
             frog->x = MAP_WIDTH - frog->width;
         *frog_prev = *frog;
+    }
+}
+
+void check_grenade_projectile_collisions(Entity grenades[], Entity gren_prev[], bool gren_active[], pid_t gren_pid[],Entity projectiles[], Entity proj_prev[], bool proj_active[], pid_t proj_pid[]){
+    for (int i = 0; i < MAX_GRENADES; i++) {
+        if (!gren_active[i]) continue;
+        for (int j = 0; j < MAX_PROJECTILES; j++) {
+            if (!proj_active[j]) continue;
+
+            if (grenades[i].x == projectiles[j].x && grenades[i].y == projectiles[j].y){
+                //cancello da schermo
+                clear_grenade(&gren_prev[i]);
+                clear_projectile(&proj_prev[j]);
+                //disattivo
+                gren_active[i] = false;
+                proj_active[j] = false;
+            }
+        }
+    }
+}
+
+void clean() {
+    pid_t w;
+    //ripulisci qualsiasi figlio terminato/zombie
+    while ((w = waitpid(-1, NULL, WNOHANG)) > 0) {
+        // ho ripulito un figlio terminato/zombie 
     }
 }

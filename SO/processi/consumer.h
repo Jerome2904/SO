@@ -17,7 +17,7 @@ typedef struct {
 void consumer(int fd_read,int fd_write, WINDOW *info_win);
 void frog_move(Entity *frog, Entity *frog_prev, int dx, int dy);
 void frog_water_check(Entity *frog, Entity *frog_prev, CrocLaneState lanes_state[], int lane_y[], int *lives, int frog_start_x, int frog_start_y);
-void frog_drift_if_on_croc(Entity *frog, Entity *frog_prev, Entity *croc);
-
-
+void frog_drift_on_croc(Entity *frog, Entity *frog_prev, Entity *croc);
+void check_grenade_projectile_collisions(Entity grenades[], Entity gren_prev[], bool gren_active[], pid_t gren_pid[],Entity projectiles[], Entity proj_prev[], bool proj_active[], pid_t proj_pid[]);
+void clean();
 #endif

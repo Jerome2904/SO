@@ -18,11 +18,6 @@ void start_game() {
         exit(EXIT_FAILURE);
     }
 
-    init_bckmap();
-    init_holes_positions();
-    init_map_holes();
-    draw_map();
-
     WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, MAP_HEIGHT, 0);
     
     // Processo rana
@@ -88,10 +83,6 @@ void start_game() {
                     crocodile_process(fd[1], lane); 
                     exit(0);
                 }
-                int status;
-                while (waitpid(-1, &status, WNOHANG) > 0) {
-                    ; // ripulisce tutti i figli già morti
-                }
             }
         }
     }
@@ -100,9 +91,6 @@ void start_game() {
     consumer(fd[0],fd[1],info_win); 
     close(fd[0]); // Chiudi il lato di lettura della pipe
     close(fd[1]); // Chiudi il lato di scrittura della pipe
-
-    wait(NULL);
-    wait(NULL);
 
 
     // Mostra messaggio finale

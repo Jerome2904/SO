@@ -8,7 +8,7 @@
 #define NUM_HOLES 5
 
 // Costanti per le posizioni delle tane
-#define HOLE_Y 3
+#define HOLE_Y 1
 #define HOLE_X1 6  
 #define HOLE_X2 21 
 #define HOLE_X3 36
