@@ -9,7 +9,7 @@ void init_bckmap() {
     init_pair(2, COLOR_WHITE, COLOR_GREEN);  // PRATO
     init_pair(3, COLOR_WHITE, COLOR_BLUE);   // ACQUA
     init_pair(4, COLOR_WHITE, COLOR_YELLOW); // TANA LIBERA
-    init_pair(5, COLOR_WHITE, COLOR_RED);    // TANA OCCUPATA
+    init_pair(5, COLOR_WHITE, COLOR_GREEN);    // TANA OCCUPATA
     init_pair(6, COLOR_GREEN, COLOR_BLUE);   // COCCODRILLO
     init_pair(7, COLOR_YELLOW, COLOR_BLUE);  // COCCODRILLO CATTIVO
 

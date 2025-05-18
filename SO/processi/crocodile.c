@@ -8,7 +8,6 @@ void init_lanes(RiverLane lanes[]) {
     lanes[0].speed = 200000;
     lanes[0].y = MAP_HEIGHT - (BOTTOM_SIDEWALK+FROG_HEIGHT);
     lanes[0].index = 0;
-    lanes[0].movements_to_spawn = 0;
 
     for (int i = 1; i < NUM_RIVER_LANES; i++) {
         lanes[i].direction = -lanes[i-1].direction;
@@ -26,9 +25,6 @@ void crocodile_init(Entity *crocodile, RiverLane *lane) {
     crocodile->y = lane->y;
     crocodile->dx = lane->direction;
     crocodile->speed = lane->speed;
-    crocodile->impacted = false;
-    crocodile->is_badcroc = (rand() % 100) < 15;
-    crocodile->cooldown = crocodile->is_badcroc ? 20 + (rand() % 20) : -1;
 
     strcpy(crocodile->sprite[0], "<BBBBBBB>");
     strcpy(crocodile->sprite[1], "<BBBBBBB>");
@@ -61,27 +57,56 @@ void crocodile_process(int fd_write, RiverLane lane) {
     write(fd_write, &msg, sizeof(msg));
 
     bool has_shot = false;
-    //manda posizione del coccodrillo finchè non esce dallo schermo
+    bool prefire_warning = false;
+    int prefire_timer = 0; //microsecondi da aspettare per sparare
+    int step = 50000; //50 ms per ogni ciclo
+ 
     msg.type = MSG_CROC_UPDATE;
-    while ((croc.dx > 0 && croc.x < MAP_WIDTH) ||(croc.dx < 0 && croc.x + croc.width > 0)) {
-        //1% di probabilità di sparare un proiettile
-        if (!has_shot && (rand() % 100) < 1) {
+
+    while ((croc.dx > 0 && croc.x < MAP_WIDTH) || (croc.dx < 0 && croc.x + croc.width > 0)) {
+        //se non ha ancora sparato,valutiamo se far partire il warning
+        if (!has_shot && !prefire_warning && (rand() % 100) < 1) {
+            prefire_warning = true;
+            prefire_timer = 400000;
+            //cambia sprite per il warning
+            if (croc.dx > 0) {
+                strcpy(croc.sprite[0], "<BBBBBB//");
+                strcpy(croc.sprite[1], "<BBBBBB\\\\");
+            } else{
+                strcpy(croc.sprite[0], "\\\\BBBBBB>");
+                strcpy(croc.sprite[1], "//BBBBBB>");
+            }
+        }
+
+        //se siamo in fase di pre-fire
+        if (prefire_warning && prefire_timer > 0) {
+            prefire_timer -= step;
+        }
+
+        //quando il timer è scaduto, spara
+        if (prefire_warning && prefire_timer <= 0) {
             Message pmsg;
             pmsg.type    = MSG_PROJECTILE_SPAWN;
-            pmsg.lane_id = lane.index;   
-            pmsg.id = my_pid;
-            //posizione di partenza del proiettile
-            if (croc.dx > 0) {
+            pmsg.lane_id = lane.index;
+            pmsg.id      = my_pid;
+
+            if (croc.dx > 0)
                 pmsg.entity.x = croc.x + croc.width;
-            } else {
+            else
                 pmsg.entity.x = croc.x - 1;
-            }
+
             pmsg.entity.y = croc.y;
             pmsg.entity.dx = croc.dx;
             write(fd_write, &pmsg, sizeof(pmsg));
-            //impedisco di sparare più volte
+
             has_shot = true;
+            prefire_warning = false;
+
+            //ripristina sprite normale
+            strcpy(croc.sprite[0], "<BBBBBBB>");
+            strcpy(croc.sprite[1], "<BBBBBBB>");
         }
+
         msg.entity = croc;
         write(fd_write, &msg, sizeof(msg));
 

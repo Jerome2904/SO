@@ -12,7 +12,7 @@ void grenade_process(int fd_write,int start_x, int start_y, int dx) {
     grenade.y = start_y;
     grenade.dx = dx;
     grenade.speed = 40000;
-    grenade.sprite[0][0] = '*';
+    grenade.sprite[0][0] = 'O';
     pid_t my_pid = getpid();
 
     //manda posizione della granata finchè non esce dallo schermo

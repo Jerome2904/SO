@@ -6,39 +6,41 @@ void frog_process(int fd_write) {
     nodelay(stdscr, TRUE);
     keypad(stdscr, TRUE);
     Message msg;
-    // inizializza posizione
-    msg.entity.x = (MAP_WIDTH - FROG_WIDTH) / 2;
-    msg.entity.y = MAP_HEIGHT - FROG_HEIGHT;
     msg.type = MSG_FROG_UPDATE;
-    
     while (1) {
         int ch = getch();
+        msg.entity.dx = 0;
+        msg.entity.dy = 0;
+
         switch (ch) {
-          case KEY_UP:    if (msg.entity.y >= VERTICAL_JUMP) msg.entity.y -= VERTICAL_JUMP; break;
-          
-          case KEY_DOWN:  if (msg.entity.y + VERTICAL_JUMP + FROG_HEIGHT <= MAP_HEIGHT) msg.entity.y += VERTICAL_JUMP; break;
-          
-          case KEY_LEFT:  if (msg.entity.x >= HORIZONTAL_JUMP) msg.entity.x -= HORIZONTAL_JUMP; break;
-          
-          case KEY_RIGHT: if (msg.entity.x + HORIZONTAL_JUMP + FROG_WIDTH <= MAP_WIDTH) msg.entity.x += HORIZONTAL_JUMP; break;
-          
-          case ' ':
-            //quando premi SPAZIO, manda un messaggio di spawn della granata
-            {
-                Message gmsg;
-                gmsg.type = MSG_GRENADE_SPAWN;
-                //parto dalla posizione corrente della rana
-                gmsg.entity.x = msg.entity.x;
-                gmsg.entity.y = msg.entity.y;
-                write(fd_write, &gmsg, sizeof(gmsg));
-            }
-            break;
-
-          case 'q': exit(0);
-
-          default:   break;
+            case KEY_UP:
+                msg.entity.dy = -VERTICAL_JUMP;
+                break;
+            case KEY_DOWN:
+                msg.entity.dy = +VERTICAL_JUMP;
+                break;
+            case KEY_LEFT:
+                msg.entity.dx = -HORIZONTAL_JUMP;
+                break;
+            case KEY_RIGHT:
+                msg.entity.dx = +HORIZONTAL_JUMP;
+                break;
+            case ' ':
+                {
+                    Message gmsg;
+                    gmsg.type = MSG_GRENADE_SPAWN;
+                    write(fd_write, &gmsg, sizeof(gmsg));
+                }
+                break;
+            case 'q':
+                exit(0);
+            default:
+                break;
         }
-        write(fd_write, &msg, sizeof(msg));
+        //manda solo se ho mosso la rana
+        if (msg.entity.dx != 0 || msg.entity.dy != 0) {
+            write(fd_write, &msg, sizeof(msg));
+        }
         usleep(50000);
     }
 }

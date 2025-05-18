@@ -24,9 +24,8 @@
 #define HORIZONTAL_JUMP 1
 #define VERTICAL_JUMP   FROG_HEIGHT
 
-//Dimensioni Corsie e Coccodrilli
+//Dimensioni Corsie
 #define NUM_RIVER_LANES 10
-#define NUM_CROC 6
 #define CROCODILE_WIDTH 9
 #define CROCODILE_HEIGHT 2
 
@@ -56,11 +55,9 @@ typedef struct {
     int width;
     int height;
     int dx;
+    int dy;
     int speed;
     char sprite[SPRITE_ROWS][SPRITE_COLS];
-    bool is_badcroc;
-    bool impacted;
-    int cooldown;
 } Entity;
 
 typedef struct {
@@ -68,8 +65,6 @@ typedef struct {
     int direction;
     int speed;
     int index;
-    int movements;
-    int movements_to_spawn;
 } RiverLane;
 
 //Tipi di messaggi

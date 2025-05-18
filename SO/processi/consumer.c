@@ -7,9 +7,6 @@
 #include "grenade.h"
 
 
-
-
-
 void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     Message msg;
     Entity frog;
@@ -23,23 +20,33 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
     // stato corsie (coccodrilli)
     CrocLaneState lanes_state[NUM_RIVER_LANES] = {0};
 
+    //coordinate Y delle corsie
+    int lane_y[NUM_RIVER_LANES];
+    lane_y[0] = MAP_HEIGHT - (BOTTOM_SIDEWALK+FROG_HEIGHT);
+    for (int l = 1; l < NUM_RIVER_LANES; l++) {
+        lane_y[l] = lane_y[l-1] - FROG_HEIGHT;
+    }
+
     // stato granate
-    Entity grenades[MAX_GRENADES]   = {0};
-    Entity gren_prev[MAX_GRENADES]  = {0};
-    pid_t  gren_pid[MAX_GRENADES]   = {0};
+    Entity grenades[MAX_GRENADES] = {0};
+    Entity gren_prev[MAX_GRENADES] = {0};
+    pid_t  gren_pid[MAX_GRENADES] = {0};
     bool   gren_active[MAX_GRENADES] = {false};
     int active_grenades = 0;
 
     // stato proiettili
     Entity  projectiles[MAX_PROJECTILES] = {0};
-    Entity  proj_prev[MAX_PROJECTILES]   = {0};
-    pid_t   proj_pid[MAX_PROJECTILES]    = {0};
+    Entity  proj_prev[MAX_PROJECTILES] = {0};
+    pid_t   proj_pid[MAX_PROJECTILES] = {0};
     bool    proj_active[MAX_PROJECTILES] = {false};
     int     proj_count = 0;
 
-    frog_init(&frog);
+    int frog_start_x = (MAP_WIDTH - FROG_WIDTH) / 2;
+    int frog_start_y = MAP_HEIGHT - FROG_HEIGHT;
 
-    
+    frog_init(&frog);
+    Entity frog_prev = frog;
+
     int lane =-1;
     pid_t id =-1;
     //tiene lo stato della corsia 
@@ -56,9 +63,12 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                 break;
 
             case MSG_FROG_UPDATE:
-                clear_entity(&frog);
-                frog.x = msg.entity.x;
-                frog.y = msg.entity.y;
+                //sposto rana
+                frog_move(&frog, &frog_prev,msg.entity.dx,msg.entity.dy);
+
+                //controllo caduta in acqua
+                frog_water_check(&frog, &frog_prev, lanes_state,lane_y,&lives,frog_start_x,frog_start_y);
+
                 break;
 
             case MSG_CROC_SPAWN:
@@ -85,11 +95,17 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
 
                 for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
                     if (lane_state->active[i] && lane_state->pid[i] == id) {
+                        //aggiorna coccodrillo
                         clear_entity(&lane_state->prev[i]);
                         lane_state->crocs[i] = msg.entity;
                         lane_state->prev[i] = lane_state->crocs[i];
                         draw_entity(&lane_state->crocs[i]);
-                        break;
+
+                        //drift della rana se è sopra questo coccodrillo
+                        frog_drift_if_on_croc(&frog,&frog_prev,&lane_state->crocs[i]);
+
+                        //controllo caduta in acqua anche qui (nel caso in cui il coccodrillo abbia portato la rana fuori dallo schermo)
+                        frog_water_check(&frog, &frog_prev,lanes_state,lane_y,&lives,frog_start_x,frog_start_y);
                     }
                 }
                 break;
@@ -113,9 +129,7 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                 if (gren_active[0] || gren_active[1]) {
                     break;
                 }
-                //posizione della rana
-                int fx = msg.entity.x, fy = msg.entity.y;
-                // Granata SINISTRA -> slot 0
+                //granata SINISTRA -> slot 0
                 pid_t g0 = fork();
                 if (g0 < 0) {
                     perror("fork grenade left");
@@ -123,15 +137,15 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                 }
                 if (g0 == 0) {
                     close(fd_read);
-                    grenade_process(fd_write, fx, fy, -1);
+                    grenade_process(fd_write, frog.x, frog.y, -1);
                 } else {
-                    gren_active[0]  = true;
-                    gren_pid[0]     = g0;
-                    gren_prev[0]    = msg.entity;
-                    grenades[0]     = msg.entity;
+                    gren_active[0] = true;
+                    gren_pid[0] = g0;
+                    gren_prev[0] = msg.entity;
+                    grenades[0] = msg.entity;
                 }
 
-                // Granata DESTRA -> slot 1
+                //granata DESTRA -> slot 1
                 pid_t g1 = fork();
                 if (g1 < 0) {
                     perror("fork grenade right");
@@ -139,12 +153,12 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                 }
                 if (g1 == 0) {
                     close(fd_read);
-                    grenade_process(fd_write, fx, fy, +1);
+                    grenade_process(fd_write, frog.x, frog.y, +1);
                 } else {
-                    gren_active[1]  = true;
-                    gren_pid[1]     = g1;
-                    gren_prev[1]    = msg.entity;
-                    grenades[1]     = msg.entity;
+                    gren_active[1] = true;
+                    gren_pid[1] = g1;
+                    gren_prev[1] = msg.entity;
+                    grenades[1] = msg.entity;
                 }
                 active_grenades = MAX_GRENADES;
                 break;
@@ -179,7 +193,7 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win) {
                 //posizione del coccodrillo
                 int cx = msg.entity.x;
                 int cy = msg.entity.y;
-                int dir = msg.entity.dx;
+                dir = msg.entity.dx;
 
                 //fork del processo proiettile
                 pid_t p = fork();
@@ -263,5 +277,73 @@ void clear_entity(Entity *entity) {
             mvaddch(entity->y + i, entity->x + j, ' ');
             attroff(COLOR_PAIR(map[entity->y + i][entity->x + j]));
         }
+    }
+}
+
+void frog_move(Entity *frog, Entity *frog_prev, int dx, int dy) {
+    clear_entity(frog_prev);
+
+    frog->x += dx;
+    frog->y += dy;
+
+    //limiti schermo
+    if (frog->x < 0) 
+        frog->x = 0;
+    if (frog->x + frog->width > MAP_WIDTH)
+        frog->x = MAP_WIDTH - frog->width;
+    if (frog->y < 0) 
+        frog->y = 0;
+    if (frog->y + frog->height > MAP_HEIGHT)
+        frog->y = MAP_HEIGHT - frog->height;
+
+    *frog_prev = *frog;
+}
+
+void frog_water_check(Entity *frog, Entity *frog_prev, CrocLaneState lanes_state[], int lane_y[], int *lives, int frog_start_x, int frog_start_y) {
+    bool in_river = false;
+    bool on_croc  = false;
+    int  which_lane = -1;
+
+    //verifico se la rana si trova sulla Y di una corsia
+    for (int l = 0; l < NUM_RIVER_LANES; l++) {
+        if (frog->y == lane_y[l]) {
+            in_river   = true;
+            which_lane = l;
+            break;
+        }
+    }
+    if (!in_river) return;//se non è in nessuna corsia, nulla da fare
+
+    //controllo se "on_croc" in quella corsia
+    CrocLaneState *lane_state = &lanes_state[which_lane];
+    for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
+        if (!lane_state->active[i]) continue;
+        Entity *croc = &lane_state->crocs[i];
+        if (frog->x >= croc->x && frog->x < croc->x + croc->width) {
+            on_croc = true;
+            break;
+        }
+    }
+
+    //se in_river e non on_croc allora cade in acqua
+    if (in_river && !on_croc) {
+        (*lives)--;
+        clear_entity(frog_prev);
+
+        frog->x = frog_start_x;
+        frog->y = frog_start_y;
+        *frog_prev = *frog;
+    }
+}
+
+void frog_drift_if_on_croc(Entity *frog, Entity *frog_prev, Entity *croc) {
+    if (frog->y == croc->y && frog->x >= croc->x && frog->x <  croc->x + croc->width) {
+        clear_entity(frog_prev);
+        frog->x += croc->dx;
+        if (frog->x < 0) 
+            frog->x = 0;
+        if (frog->x + frog->width > MAP_WIDTH)
+            frog->x = MAP_WIDTH - frog->width;
+        *frog_prev = *frog;
     }
 }
