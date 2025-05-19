@@ -13,15 +13,23 @@ void frog_process(int fd_write) {
         msg.entity.dy = 0;
 
         switch (ch) {
+            case 'w':
+            case 'W':
             case KEY_UP:
                 msg.entity.dy = -VERTICAL_JUMP;
                 break;
+            case 's':
+            case 'S':
             case KEY_DOWN:
                 msg.entity.dy = +VERTICAL_JUMP;
                 break;
+            case 'a':
+            case 'A':
             case KEY_LEFT:
                 msg.entity.dx = -HORIZONTAL_JUMP;
                 break;
+            case 'd':
+            case 'D':
             case KEY_RIGHT:
                 msg.entity.dx = +HORIZONTAL_JUMP;
                 break;
@@ -33,6 +41,9 @@ void frog_process(int fd_write) {
                 }
                 break;
             case 'q':
+            case 'Q':
+            case 27: // ESC
+                game_state = GAME_QUITTING;
                 exit(0);
             default:
                 break;

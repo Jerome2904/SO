@@ -18,7 +18,7 @@ void grenade_process(int fd_write,int start_x, int start_y, int dx) {
     //manda posizione della granata finchè non esce dallo schermo
     msg.type = MSG_GRENADE_UPDATE;
     while ((grenade.dx > 0 && grenade.x < MAP_WIDTH) ||(grenade.dx < 0 && grenade.x + grenade.width > 0)) {
-        msg.type   = MSG_GRENADE_UPDATE;
+        msg.type = MSG_GRENADE_UPDATE;
         msg.entity = grenade;
         msg.id = my_pid;
         write(fd_write, &msg, sizeof(msg));
@@ -28,7 +28,7 @@ void grenade_process(int fd_write,int start_x, int start_y, int dx) {
     }
 
     //messaggio di despawn
-    msg.type   = MSG_GRENADE_DESPAWN;
+    msg.type = MSG_GRENADE_DESPAWN;
     msg.entity = grenade;
     msg.id = my_pid;
     write(fd_write, &msg, sizeof(msg));

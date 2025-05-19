@@ -7,7 +7,7 @@
 #include "grenade.h"
 
 
-void consumer(int fd_read,int fd_write, WINDOW *info_win,RiverLane lanes[]) {
+void consumer(int fd_read,int fd_write, WINDOW *info_win,pid_t spawner_pids[],int n_spawners,RiverLane lanes[]) {
     init_bckmap();
     init_holes_positions();
     init_map_holes();
@@ -23,8 +23,7 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,RiverLane lanes[]) {
     
     // stato corsie (coccodrilli)
     CrocLaneState lanes_state[NUM_RIVER_LANES] = {0};
-    //serve solo a rendere più leggibile e compatto il codice
-    CrocLaneState *lane_state = NULL;
+    CrocLaneState *lane_state = NULL; //serve solo a rendere più leggibile e compatto il codice
 
     //coordinate Y delle corsie
     int lane_y[NUM_RIVER_LANES];
@@ -81,8 +80,13 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,RiverLane lanes[]) {
                 bool fell_in_water = frog_water_check(&frog, &frog_prev, lanes_state,lane_y,&lives,frog_start_x,frog_start_y);
                 if (fell_in_water) {
                     lives--;
-                    restart_round(&frog,&frog_prev,frog_start_x,frog_start_y,lanes_state,lanes,gren_active,proj_active,gren_prev,proj_prev);
+                    //killo tutte le entità
+                    kill_all_entities(spawner_pids, NUM_RIVER_LANES,lanes_state,gren_pid, gren_active,proj_pid, proj_active);
+                    //resetto gli stati
+                    restart_round(&frog, &frog_prev,frog_start_x, frog_start_y,lanes_state, lanes,gren_active, proj_active,grenades, projectiles);
                     time = ROUND_TIME;
+                    //ricreo i nuovi spawner
+                    create_spawners(fd_write, fd_read, lanes, spawner_pids, NUM_RIVER_LANES);
                     continue;
                 }
                 hole_index = check_hole_reached(&frog);
@@ -95,15 +99,24 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,RiverLane lanes[]) {
                         return;
                     }
                     score += time * 100;
-                    restart_round(&frog,&frog_prev,frog_start_x,frog_start_y,lanes_state,lanes,gren_active,proj_active,gren_prev,proj_prev);
+                    //killo tutte le entità
+                    kill_all_entities(spawner_pids, NUM_RIVER_LANES,lanes_state,gren_pid, gren_active,proj_pid, proj_active);
+                    //resetto gli stati
+                    restart_round(&frog, &frog_prev,frog_start_x, frog_start_y,lanes_state, lanes,gren_active, proj_active,grenades, projectiles);
                     time = ROUND_TIME;
+                    //ricreo i nuovi spawner
+                    create_spawners(fd_write, fd_read, lanes, spawner_pids, NUM_RIVER_LANES);
                     continue;
                 }
                 else if (frog.y == HOLE_Y && hole_index == -1) {
                     lives--;
-                    restart_round(&frog,&frog_prev,frog_start_x,frog_start_y,lanes_state,lanes,gren_active,proj_active,gren_prev,proj_prev);
+                    //killo tutte le entità
+                    kill_all_entities(spawner_pids, NUM_RIVER_LANES,lanes_state,gren_pid, gren_active,proj_pid, proj_active);
+                    //resetto gli stati
+                    restart_round(&frog, &frog_prev,frog_start_x, frog_start_y,lanes_state, lanes,gren_active, proj_active,grenades, projectiles);
                     time = ROUND_TIME;
-                    continue;
+                    //ricreo i nuovi spawner
+                    create_spawners(fd_write, fd_read, lanes, spawner_pids, NUM_RIVER_LANES);
                 }
                 break;
 
@@ -144,8 +157,13 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,RiverLane lanes[]) {
                         bool fell_in_water = frog_water_check(&frog, &frog_prev, lanes_state,lane_y,&lives,frog_start_x,frog_start_y);
                         if (fell_in_water) {
                             lives--;
-                            restart_round(&frog,&frog_prev,frog_start_x,frog_start_y,lanes_state,lanes,gren_active,proj_active,gren_prev,proj_prev);
+                            //killo tutte le entità
+                            kill_all_entities(spawner_pids, NUM_RIVER_LANES,lanes_state,gren_pid, gren_active,proj_pid, proj_active);
+                            //resetto gli stati
+                            restart_round(&frog, &frog_prev,frog_start_x, frog_start_y,lanes_state, lanes,gren_active, proj_active,grenades, projectiles);
                             time = ROUND_TIME;
+                            //ricreo i nuovi spawner
+                            create_spawners(fd_write, fd_read, lanes, spawner_pids, NUM_RIVER_LANES);
                             continue;
                         }
                     }
@@ -437,8 +455,8 @@ void reset_crocs_state(CrocLaneState lanes_state[]) {
     for (int l = 0; l < NUM_RIVER_LANES; l++) {
         for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
             clear_entity(&lanes_state[l].prev[i]);
-            lanes_state[l].pid[i] = 0;
             lanes_state[l].active[i] = false;
+            lanes_state[l].pid[i] = 0;
         }
             
     }
@@ -471,4 +489,42 @@ void restart_round(Entity *frog,Entity *frog_prev,int frog_start_x,int frog_star
     reset_grenades_state(gren_active,grenades,MAX_GRENADES);
     reset_projectiles_state(proj_active,projectiles,MAX_PROJECTILES);
     init_lanes(lanes);
+}
+
+
+void kill_all_crocs(CrocLaneState lanes_state[]) {
+    for (int l = 0; l < NUM_RIVER_LANES; l++) {
+        for (int i = 0; i < MAX_CROCS_PER_LANE; i++) {
+            pid_t pid = lanes_state[l].pid[i];
+            if (lanes_state[l].active[i] && pid > 0) {
+                kill(pid, SIGKILL);
+                waitpid(pid, NULL, 0);
+            }
+        }
+    }
+}
+
+void kill_all_grenades(pid_t gren_pid[], bool gren_active[]) {
+    for (int i = 0; i < MAX_GRENADES; i++) {
+        if (gren_active[i] && gren_pid[i] > 0) {
+            kill(gren_pid[i], SIGKILL);
+            waitpid(gren_pid[i], NULL, 0);
+        }
+    }
+}
+
+void kill_all_projectiles(pid_t proj_pid[], bool proj_active[]) {
+    for (int i = 0; i < MAX_PROJECTILES; i++) {
+        if (proj_active[i] && proj_pid[i] > 0) {
+            kill(proj_pid[i], SIGKILL);
+            waitpid(proj_pid[i], NULL, 0);
+        }
+    }
+}
+
+void kill_all_entities(pid_t spawner_pids[],int n_spawners,CrocLaneState lanes_state[],pid_t gren_pid[], bool gren_active[],pid_t proj_pid[], bool proj_active[]){
+    kill_all_spawners(spawner_pids, n_spawners);
+    kill_all_crocs(lanes_state);
+    kill_all_grenades(gren_pid, gren_active);
+    kill_all_projectiles(proj_pid, proj_active);
 }

@@ -7,6 +7,7 @@
 
 int game_state = GAME_RUNNING;
 int score = INITIAL_SCORE;
+pid_t spawner_pids[NUM_RIVER_LANES];
 
 void start_game() {
     srand(time(NULL));
@@ -50,47 +51,11 @@ void start_game() {
     RiverLane lanes[NUM_RIVER_LANES];
     init_lanes(lanes);
 
-    for (int i = 0; i < NUM_RIVER_LANES; i++) {
-        pid_t spawner = fork();
-        if (spawner < 0) {
-            perror("fork crocodile spawner");
-            endwin();
-            exit(EXIT_FAILURE);
-        }
-        if (spawner == 0) {
-            //PROCESSO SPAWNER per corsia i
-            srand(time(NULL) ^ getpid());
-            close(fd[0]);   // chiudo lettura
-            
-            RiverLane lane = lanes[i];
-            bool first_spawn = true;
-            while (1) {
-                // primo spawn non ha ritardo
-                if (first_spawn) {
-                    first_spawn = false;
-                } else {
-                    //sleep casuale tra 3 e 6 secondi
-                    int delay_ms = 3 + rand() % 3;
-                    usleep(delay_ms * 1000000);
-                }
-
-                //fork dell'istanza coccodrillo
-                pid_t cpid = fork();
-                if (cpid < 0) {
-                    perror("fork crocodile instance");
-                    exit(1);
-                }
-                if (cpid == 0) {
-                    crocodile_process(fd[1], lane); 
-                    exit(0);
-                }
-                clean();
-            }
-        }
-    }
+    
+    create_spawners(fd[1],fd[0], lanes, spawner_pids, NUM_RIVER_LANES);
 
     // Processo padre
-    consumer(fd[0],fd[1],info_win,lanes); 
+    consumer(fd[0], fd[1], info_win,spawner_pids, NUM_RIVER_LANES,lanes);
     close(fd[0]); // Chiudi il lato di lettura della pipe
     close(fd[1]); // Chiudi il lato di scrittura della pipe
 
@@ -142,4 +107,51 @@ void restart_game() {
     clear();
     refresh();
     start_game();
+}
+
+void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes) {
+    for (int i = 0; i < n_lanes; i++) {
+        pid_t sp = fork();
+        if (sp < 0) { perror("fork spawner"); exit(1); }
+        spawner_pids[i] = sp;
+        if (sp == 0) {
+            // PROCESSO SPAWNER per corsia i
+            setpgid(0, 0); //fa sì che ogni spawner diventi capo di un suo process group
+            close(fd_read);
+            //faccio lo XOR con il pid per avere un seme diverso per ogni spawner
+            srand(time(NULL) ^ getpid()); 
+            RiverLane lane = lanes[i];
+            bool first_spawns = true;
+            while (1) {
+                //primo spawn non ha ritardo
+                if (!first_spawns) {
+                    //sleep casuale tra 3 e 6 secondi
+                    int delay_ms = 3 + rand() % 3;
+                    usleep(delay_ms * 1000000);
+                }
+                first_spawns = false;
+                pid_t c = fork();
+                if (c == 0) {
+                    close(fd_read);
+                    crocodile_process(fd_write, lane);
+                    exit(0);
+                }
+                clean();
+            }
+        }
+        
+    }
+}
+
+void kill_all_spawners(pid_t spawner_pids[], int n) {
+    for (int i = 0; i < n; i++) {
+        pid_t pgid = spawner_pids[i];
+        if (pgid > 0) {
+            //uccide tutto il process‑group (spawner + coccodrilli figli)
+            kill(-pgid, SIGKILL);       
+            //ripulisce lo spawner
+            waitpid(pgid, NULL, 0);     
+            spawner_pids[i] = 0;
+        }
+    }
 }

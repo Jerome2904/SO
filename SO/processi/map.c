@@ -48,7 +48,7 @@ void init_holes_positions() {
 void init_map_holes() {
     for (int i = 0; i < NUM_HOLES; i++) {
         for (int dy = 0; dy < FROG_HEIGHT; dy++) {
-            for (int dx = 0; dx < FROG_WIDTH+2; dx++) {
+            for (int dx = 0; dx < FROG_WIDTH*2; dx++) {
                 map[tane[i].y + dy][tane[i].x + dx] = 4;
             }
         }
@@ -61,7 +61,7 @@ int check_hole_reached(Entity *frog) {
 
     int hole_positions[NUM_HOLES] = { HOLE_X1, HOLE_X2, HOLE_X3, HOLE_X4, HOLE_X5 };
     for (int i = 0; i < NUM_HOLES; i++) {
-        if (frog->x == hole_positions[i] || frog->x == hole_positions[i] + 1 || frog->x == hole_positions[i] + 2) {
+        if (frog->x == hole_positions[i] || frog->x == hole_positions[i] + 1 || frog->x == hole_positions[i] + 2 || frog->x == hole_positions[i] + frog->width){
             if (!tane[i].occupied) 
                 return i;
             else
@@ -76,7 +76,7 @@ void hole_update(int hole_index) {
     tane[hole_index].occupied = true;
     // Ridisegna la tana 
     for (int dy = 0; dy < FROG_HEIGHT; dy++) {
-        for (int dx = 0; dx < FROG_WIDTH+2; dx++) {
+        for (int dx = 0; dx < FROG_WIDTH*2; dx++) {
             map[tane[hole_index].y + dy][tane[hole_index].x + dx] = 2;
             attron(COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
             mvaddch(tane[hole_index].y + dy, tane[hole_index].x + dx, ' ');

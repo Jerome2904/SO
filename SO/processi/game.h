@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <stdbool.h>
+#include <signal.h>
 
 
 //Dimensione dell'area di gioco
@@ -96,6 +97,7 @@ typedef enum {
 extern int game_state;  
 extern int score;       
 extern int round_reset_flag;  
+extern pid_t spawner_pids[NUM_RIVER_LANES];
 
 void show_instructions();
 void exit_program();
@@ -103,7 +105,8 @@ void start_game();
 void game_state_win();
 void game_over();
 void restart_game();
-
+void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes);
+void kill_all_spawners(pid_t spawner_pids[], int n);
 void draw_entity(Entity *entity);
 void clear_entity(Entity *entity);
 

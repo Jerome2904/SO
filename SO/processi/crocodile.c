@@ -50,7 +50,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
     Message msg;
 
     //messaggio di spawn
-    msg.type   = MSG_CROC_SPAWN;
+    msg.type = MSG_CROC_SPAWN;
     msg.lane_id = lane.index;
     msg.id = my_pid;
     msg.entity = croc;
@@ -86,9 +86,9 @@ void crocodile_process(int fd_write, RiverLane lane) {
         //quando il timer è scaduto, spara
         if (prefire_warning && prefire_timer <= 0) {
             Message pmsg;
-            pmsg.type    = MSG_PROJECTILE_SPAWN;
+            pmsg.type = MSG_PROJECTILE_SPAWN;
             pmsg.lane_id = lane.index;
-            pmsg.id      = my_pid;
+            pmsg.id = my_pid;
 
             if (croc.dx > 0) {
                 pmsg.entity.x = croc.x + croc.width + 1;
@@ -124,7 +124,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
     }
 
     //messaggio di despawn
-    msg.type   = MSG_CROC_DESPAWN;
+    msg.type = MSG_CROC_DESPAWN;
     msg.entity = croc;
     write(fd_write, &msg, sizeof(msg));
 
@@ -148,7 +148,7 @@ void projectile_process(int fd_write,int start_x, int start_y, int dx) {
     //manda posizione della granata finchè non esce dallo schermo
     msg.type = MSG_PROJECTILE_UPDATE;
     while ((projectile.dx > 0 && projectile.x < MAP_WIDTH) ||(projectile.dx < 0 && projectile.x + projectile.width > 0)) {
-        msg.type   = MSG_PROJECTILE_UPDATE;
+        msg.type = MSG_PROJECTILE_UPDATE;
         msg.entity = projectile;
         msg.id = my_pid;
         write(fd_write, &msg, sizeof(msg));
@@ -158,7 +158,7 @@ void projectile_process(int fd_write,int start_x, int start_y, int dx) {
     }
 
     //messaggio di despawn
-    msg.type   = MSG_PROJECTILE_DESPAWN;
+    msg.type = MSG_PROJECTILE_DESPAWN;
     msg.entity = projectile;
     msg.id = my_pid;
     write(fd_write, &msg, sizeof(msg));
