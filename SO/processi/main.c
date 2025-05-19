@@ -96,7 +96,6 @@ int main() {
 
 void show_instructions() {
     clear();
-    box(stdscr, 0, 0);
     mvprintw(3, (COLS - 11)/2, "ISTRUZIONI");
     mvprintw(6, (COLS - 32)/2, "1. Muovi la rana con le frecce.");
     mvprintw(9, (COLS - 43)/2, "2. Evita gli ostacoli e raggiungi la tana.");

@@ -9,7 +9,6 @@ void init_bckmap() {
     init_pair(2, COLOR_WHITE, COLOR_GREEN);  // PRATO
     init_pair(3, COLOR_WHITE, COLOR_BLUE);   // ACQUA
     init_pair(4, COLOR_WHITE, COLOR_YELLOW); // TANA LIBERA
-    init_pair(5, COLOR_WHITE, COLOR_GREEN);    // TANA OCCUPATA
     init_pair(6, COLOR_GREEN, COLOR_BLUE);   // COCCODRILLO
     init_pair(7, COLOR_YELLOW, COLOR_BLUE);  // COCCODRILLO CATTIVO
 
@@ -23,6 +22,7 @@ void init_bckmap() {
 
 // Disegna l'intera mappa
 void draw_map() {
+    clear();
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
             attron(COLOR_PAIR(map[y][x]));
@@ -61,7 +61,7 @@ int check_hole_reached(Entity *frog) {
 
     int hole_positions[NUM_HOLES] = { HOLE_X1, HOLE_X2, HOLE_X3, HOLE_X4, HOLE_X5 };
     for (int i = 0; i < NUM_HOLES; i++) {
-        if (frog->x == hole_positions[i]) {
+        if (frog->x == hole_positions[i] || frog->x == hole_positions[i] + 1 || frog->x == hole_positions[i] + 2) {
             if (!tane[i].occupied) 
                 return i;
             else
@@ -76,14 +76,13 @@ void hole_update(int hole_index) {
     tane[hole_index].occupied = true;
     // Ridisegna la tana 
     for (int dy = 0; dy < FROG_HEIGHT; dy++) {
-        for (int dx = 0; dx < FROG_WIDTH; dx++) {
+        for (int dx = 0; dx < FROG_WIDTH+2; dx++) {
             map[tane[hole_index].y + dy][tane[hole_index].x + dx] = 2;
             attron(COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
             mvaddch(tane[hole_index].y + dy, tane[hole_index].x + dx, ' ');
             attroff(COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
         }
     }
-    draw_map();
 }
 
 // Controlla se tutte le tane sono occupate

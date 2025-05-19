@@ -49,7 +49,7 @@ void start_game() {
     // Inizializzo le corsie
     RiverLane lanes[NUM_RIVER_LANES];
     init_lanes(lanes);
-    
+
     for (int i = 0; i < NUM_RIVER_LANES; i++) {
         pid_t spawner = fork();
         if (spawner < 0) {
@@ -61,6 +61,7 @@ void start_game() {
             //PROCESSO SPAWNER per corsia i
             srand(time(NULL) ^ getpid());
             close(fd[0]);   // chiudo lettura
+            
             RiverLane lane = lanes[i];
             bool first_spawn = true;
             while (1) {
@@ -83,12 +84,13 @@ void start_game() {
                     crocodile_process(fd[1], lane); 
                     exit(0);
                 }
+                clean();
             }
         }
     }
 
     // Processo padre
-    consumer(fd[0],fd[1],info_win); 
+    consumer(fd[0],fd[1],info_win,lanes); 
     close(fd[0]); // Chiudi il lato di lettura della pipe
     close(fd[1]); // Chiudi il lato di scrittura della pipe
 

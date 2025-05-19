@@ -5,7 +5,7 @@
 // Inizializza le corsie
 void init_lanes(RiverLane lanes[]) {
     lanes[0].direction = (rand() % 2 == 0 ? 1 : -1);
-    lanes[0].speed = 200000;
+    lanes[0].speed = 160000;
     lanes[0].y = MAP_HEIGHT - (BOTTOM_SIDEWALK+FROG_HEIGHT);
     lanes[0].index = 0;
 
@@ -65,7 +65,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
 
     while ((croc.dx > 0 && croc.x < MAP_WIDTH) || (croc.dx < 0 && croc.x + croc.width > 0)) {
         //se non ha ancora sparato,valutiamo se far partire il warning
-        if (!has_shot && !prefire_warning && (rand() % 100) < 5) {
+        if (!has_shot && !prefire_warning && (rand() % 100) < 1) {
             prefire_warning = true;
             prefire_timer = 400000;
             //cambia sprite per il warning
@@ -90,10 +90,19 @@ void crocodile_process(int fd_write, RiverLane lane) {
             pmsg.lane_id = lane.index;
             pmsg.id      = my_pid;
 
-            if (croc.dx > 0)
-                pmsg.entity.x = croc.x + croc.width;
-            else
-                pmsg.entity.x = croc.x - 1;
+            if (croc.dx > 0) {
+                pmsg.entity.x = croc.x + croc.width + 1;
+                // evita di sparare fuori dallo schermo
+                if (pmsg.entity.x >= MAP_WIDTH) 
+                    pmsg.entity.x = MAP_WIDTH - 1;
+            }    
+            else {
+                pmsg.entity.x = croc.x - 2;
+                // evita di sparare fuori dallo schermo
+                if (pmsg.entity.x < 0) 
+                    pmsg.entity.x = 0;
+            }
+                
 
             pmsg.entity.y = croc.y;
             pmsg.entity.dx = croc.dx;
