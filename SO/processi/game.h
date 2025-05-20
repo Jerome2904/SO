@@ -105,8 +105,6 @@ void start_game();
 void game_state_win();
 void game_over();
 void restart_game();
-void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes);
-void kill_all_spawners(pid_t spawner_pids[], int n);
 void draw_entity(Entity *entity);
 void clear_entity(Entity *entity);
 

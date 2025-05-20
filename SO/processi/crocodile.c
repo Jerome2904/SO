@@ -33,8 +33,8 @@ void crocodile_init(Entity *crocodile, RiverLane *lane) {
 void crocodile_process(int fd_write, RiverLane lane) {
     pid_t my_pid = getpid();
 
-    //sleep casuale tra 1 e 3 secondi
-    int delay_ms = 1 + rand() % 3;
+    //sleep casuale tra 1 e 2 secondi
+    int delay_ms = 1 + rand() % 2;
     usleep(delay_ms * 1000000);
 
     //inizializzo un nuovo coccodrillo
@@ -65,7 +65,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
 
     while ((croc.dx > 0 && croc.x < MAP_WIDTH) || (croc.dx < 0 && croc.x + croc.width > 0)) {
         //se non ha ancora sparato,valutiamo se far partire il warning
-        if (!has_shot && !prefire_warning && (rand() % 100) < 1) {
+        if (!has_shot && !prefire_warning && (rand() % 100) < 3) {
             prefire_warning = true;
             prefire_timer = 400000;
             //cambia sprite per il warning

@@ -3,8 +3,8 @@
 
 #include "game.h"
 
-#define MAX_CROCS_PER_LANE  4
-#define MAX_PROJECTILES 10
+#define MAX_CROCS_PER_LANE  3
+#define MAX_PROJECTILES 20
 
 //struttura per memorizzare lo stato di un coccodrillo in una corsia del fiume 
 typedef struct {
@@ -25,7 +25,13 @@ void reset_frog_position(Entity *frog,Entity *frog_prev,int frog_start_x,int fro
 void reset_crocs_state(CrocLaneState lanes_state[]);
 void reset_grenades_state(bool gren_active[],Entity gren_prev[],int max_gren);
 void reset_projectiles_state(bool proj_active[],Entity proj_prev[],int max_proj);
-void restart_round(Entity *frog,Entity *frog_prev,int frog_start_x,int frog_start_y,CrocLaneState lanes_state[],RiverLane lanes[], bool gren_active[], bool proj_active[],Entity gren_prev[],Entity proj_prev[]); ;
-void kill_all_entities(pid_t spawner_pids[],int n_spawners,CrocLaneState lanes_state[],pid_t gren_pid[], bool gren_active[],pid_t proj_pid[], bool proj_active[]);
+void restart_round(Entity *frog,Entity *frog_prev,int frog_start_x,int frog_start_y,CrocLaneState lanes_state[],RiverLane lanes[], bool gren_active[], bool proj_active[],Entity gren_prev[],Entity proj_prev[]);
+void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes);
+void kill_all_spawners(pid_t spawner_pids[], int n);
+void kill_all_crocs(CrocLaneState lanes_state[]);
+void kill_all_grenades(pid_t gren_pid[], bool gren_active[]);
+void kill_all_projectiles(pid_t proj_pid[], bool proj_active[]);
+void kill_all_entities(pid_t spawner_pids[], int n_spawners,CrocLaneState lanes_state[],pid_t gren_pid[], bool gren_active[],pid_t proj_pid[], bool proj_active[]);
+
 
 #endif

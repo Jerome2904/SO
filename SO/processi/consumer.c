@@ -287,8 +287,13 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,pid_t spawner_pids[],in
                         //controllo se la rana viene colpita
                         if (check_projectile_hits_frog(&projectiles[i], &frog)) {
                             lives--;
-                            restart_round(&frog,&frog_prev,frog_start_x,frog_start_y,lanes_state,lanes,gren_active,proj_active,gren_prev,proj_prev);
+                            //killo tutte le entità
+                            kill_all_entities(spawner_pids, NUM_RIVER_LANES,lanes_state,gren_pid, gren_active,proj_pid, proj_active);
+                            //resetto gli stati
+                            restart_round(&frog, &frog_prev,frog_start_x, frog_start_y,lanes_state, lanes,gren_active, proj_active,grenades, projectiles);
                             time = ROUND_TIME;
+                            //ricreo i nuovi spawner
+                            create_spawners(fd_write, fd_read, lanes, spawner_pids, NUM_RIVER_LANES);
                             continue;
                         }
                         break;
@@ -491,6 +496,18 @@ void restart_round(Entity *frog,Entity *frog_prev,int frog_start_x,int frog_star
     init_lanes(lanes);
 }
 
+void kill_all_spawners(pid_t spawner_pids[], int n) {
+    for (int i = 0; i < n; i++) {
+        pid_t pgid = spawner_pids[i];
+        if (pgid > 0) {
+            //uccide tutto il process‑group (spawner + coccodrilli figli)
+            kill(-pgid, SIGKILL);       
+            //ripulisce lo spawner
+            waitpid(pgid, NULL, 0);     
+            spawner_pids[i] = 0;
+        }
+    }
+}
 
 void kill_all_crocs(CrocLaneState lanes_state[]) {
     for (int l = 0; l < NUM_RIVER_LANES; l++) {
@@ -527,4 +544,37 @@ void kill_all_entities(pid_t spawner_pids[],int n_spawners,CrocLaneState lanes_s
     kill_all_crocs(lanes_state);
     kill_all_grenades(gren_pid, gren_active);
     kill_all_projectiles(proj_pid, proj_active);
+}
+
+void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes) {
+    for (int i = 0; i < n_lanes; i++) {
+        pid_t sp = fork();
+        if (sp < 0) { perror("fork spawner"); exit(1); }
+        spawner_pids[i] = sp;
+        if (sp == 0) {
+            // PROCESSO SPAWNER per corsia i
+            setpgid(0, 0); //fa sì che ogni spawner diventi capo di un suo process group
+            close(fd_read);
+            //faccio lo XOR con il pid per avere un seme diverso per ogni spawner
+            srand(time(NULL) ^ getpid()); 
+            RiverLane lane = lanes[i];
+            bool first_spawns = true;
+            while (1) {
+                //primo spawn non ha ritardo
+                if (!first_spawns) {
+                    //sleep casuale tra 3 e 6 secondi
+                    int delay_ms = 3 + rand() % 3;
+                    usleep(delay_ms * 1000000);
+                }
+                first_spawns = false;
+                pid_t c = fork();
+                if (c == 0) {
+                    close(fd_read);
+                    crocodile_process(fd_write, lane);
+                    exit(0);
+                }
+                clean();
+            }
+        }
+    }
 }
