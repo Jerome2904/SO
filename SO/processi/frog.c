@@ -40,11 +40,14 @@ void frog_process(int fd_write) {
                     write(fd_write, &gmsg, sizeof(gmsg));
                 }
                 break;
-            case 'q':
-            case 'Q':
-            case 27: // ESC
-                game_state = GAME_QUITTING;
-                exit(0);
+            case 'p':
+            case 'P':
+                {
+                    Message pmsg;
+                    pmsg.type = MSG_PAUSE;
+                    write(fd_write, &pmsg, sizeof(pmsg));
+                }
+                break;
             default:
                 break;
         }

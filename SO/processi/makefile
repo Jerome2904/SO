@@ -2,13 +2,13 @@
 TARGET = frogger
 
 # File sorgente
-SRC = main.c game.c frog.c  consumer.c map.c timer.c crocodile.c grenade.c
+SRC = main.c game.c frog.c  consumer.c map.c timer.c crocodile.c grenade.c spawner.c
 
 # File oggetto (generati dai sorgenti)
 OBJ = $(SRC:.c=.o)
 
 # Header file
-HEADERS = game.h frog.h map.h timer.h crocodile.h consumer.h grenade.h
+HEADERS = game.h frog.h map.h timer.h crocodile.h consumer.h grenade.h spawner.h
 
 # Flags del compilatore
 CC = gcc

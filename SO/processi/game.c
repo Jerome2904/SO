@@ -4,10 +4,10 @@
 #include "map.h"
 #include "timer.h"
 #include "crocodile.h"
+#include "spawner.h"
 
 int game_state = GAME_RUNNING;
 int score = INITIAL_SCORE;
-pid_t spawner_pids[NUM_RIVER_LANES];
 
 void start_game() {
     srand(time(NULL));
@@ -22,26 +22,26 @@ void start_game() {
     WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, MAP_HEIGHT, 0);
     
     // Processo rana
-    pid_t pid = fork();
-    if (pid < 0) {
+    pid_t frog_pid = fork();
+    if (frog_pid < 0) {
         perror("fork rana");
         endwin();
         exit(EXIT_FAILURE);
     }
-    if (pid == 0) {
+    if (frog_pid == 0) {
         close(fd[0]); // Chiudi il lato di lettura della pipe
         frog_process(fd[1]); 
         close(fd[1]); // Chiudi il lato di scrittura della pipe
         exit(0);
     }
     // Processo timer
-    pid = fork();
-    if (pid < 0) {
+    pid_t timer_pid = fork();
+    if (timer_pid < 0) {
         perror("fork timer");
         endwin();
         exit(EXIT_FAILURE);
     }
-    if (pid == 0) {
+    if (timer_pid == 0) {
         close(fd[0]);
         timer_process(fd[1]);
         exit(0);
@@ -51,11 +51,11 @@ void start_game() {
     RiverLane lanes[NUM_RIVER_LANES];
     init_lanes(lanes);
 
-    
+    pid_t spawner_pids[NUM_RIVER_LANES];
     create_spawners(fd[1],fd[0], lanes, spawner_pids, NUM_RIVER_LANES);
 
     // Processo padre
-    consumer(fd[0], fd[1], info_win,spawner_pids, NUM_RIVER_LANES,lanes);
+    consumer(fd[0], fd[1], info_win,spawner_pids, NUM_RIVER_LANES,lanes, frog_pid, timer_pid);
     close(fd[0]); // Chiudi il lato di lettura della pipe
     close(fd[1]); // Chiudi il lato di scrittura della pipe
 

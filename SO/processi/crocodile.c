@@ -5,7 +5,7 @@
 // Inizializza le corsie
 void init_lanes(RiverLane lanes[]) {
     lanes[0].direction = (rand() % 2 == 0 ? 1 : -1);
-    lanes[0].speed = 160000;
+    lanes[0].speed = 200000;
     lanes[0].y = MAP_HEIGHT - (BOTTOM_SIDEWALK+FROG_HEIGHT);
     lanes[0].index = 0;
 

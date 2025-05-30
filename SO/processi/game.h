@@ -75,6 +75,7 @@ typedef enum {
     MSG_GRENADE_SPAWN, MSG_GRENADE_UPDATE, MSG_GRENADE_DESPAWN,
     MSG_CROC_SPAWN, MSG_CROC_UPDATE, MSG_CROC_DESPAWN,
     MSG_PROJECTILE_SPAWN, MSG_PROJECTILE_UPDATE, MSG_PROJECTILE_DESPAWN,
+    MSG_PAUSE
 } MessageType;
 
 //Struttura del messaggio inviato
@@ -97,7 +98,6 @@ typedef enum {
 extern int game_state;  
 extern int score;       
 extern int round_reset_flag;  
-extern pid_t spawner_pids[NUM_RIVER_LANES];
 
 void show_instructions();
 void exit_program();

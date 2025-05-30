@@ -5,9 +5,10 @@
 #include "timer.h"
 #include "crocodile.h"
 #include "grenade.h"
+#include "spawner.h"
 
 
-void consumer(int fd_read,int fd_write, WINDOW *info_win,pid_t spawner_pids[],int n_spawners,RiverLane lanes[]) {
+void consumer(int fd_read,int fd_write,WINDOW *info_win,pid_t spawner_pids[],int n_spawners,RiverLane lanes[],pid_t frog_pid,pid_t timer_pid){
     init_bckmap();
     init_holes_positions();
     init_map_holes();
@@ -59,9 +60,35 @@ void consumer(int fd_read,int fd_write, WINDOW *info_win,pid_t spawner_pids[],in
     //direzione della granata/proiettile
     int dir = 0;
 
+    bool paused = false;
+
     while (lives > 0 && game_state == GAME_RUNNING) {
         if (read(fd_read, &msg, sizeof(msg)) <= 0) break;
-        
+        //toggle pausa
+        if (msg.type == MSG_PAUSE) {
+            paused = !paused;
+            if (paused) {
+                //metto in pausa tutti i produttori tranne la rana
+                pause_producers(timer_pid, spawner_pids, n_spawners,gren_pid, gren_active,proj_pid, proj_active);
+                //mostro menu pausa
+                mvprintw(LINES/2-1,(COLS-6)/2,"PAUSA");
+                mvprintw(LINES/2,  (COLS-23)/2,"Premi P per riprendere");
+                refresh();
+            } else {                         
+                //riprende tutti i produttori
+                resume_producers(timer_pid, spawner_pids, n_spawners,gren_pid, gren_active,proj_pid, proj_active);
+                //ridisegno
+                clear();
+                draw_map();
+                werase(info_win);
+                wrefresh(info_win);
+            }
+        }
+        if (paused) {
+            //scarto tutti i messaggi mentre sono in pausa
+            continue;
+        }
+
         switch (msg.type) {
             case MSG_TIMER_TICK:
                 time--;
@@ -546,35 +573,68 @@ void kill_all_entities(pid_t spawner_pids[],int n_spawners,CrocLaneState lanes_s
     kill_all_projectiles(proj_pid, proj_active);
 }
 
-void create_spawners(int fd_write,int fd_read, RiverLane lanes[],pid_t spawner_pids[], int n_lanes) {
-    for (int i = 0; i < n_lanes; i++) {
-        pid_t sp = fork();
-        if (sp < 0) { perror("fork spawner"); exit(1); }
-        spawner_pids[i] = sp;
-        if (sp == 0) {
-            // PROCESSO SPAWNER per corsia i
-            setpgid(0, 0); //fa sì che ogni spawner diventi capo di un suo process group
-            close(fd_read);
-            //faccio lo XOR con il pid per avere un seme diverso per ogni spawner
-            srand(time(NULL) ^ getpid()); 
-            RiverLane lane = lanes[i];
-            bool first_spawns = true;
-            while (1) {
-                //primo spawn non ha ritardo
-                if (!first_spawns) {
-                    //sleep casuale tra 3 e 6 secondi
-                    int delay_ms = 3 + rand() % 3;
-                    usleep(delay_ms * 1000000);
-                }
-                first_spawns = false;
-                pid_t c = fork();
-                if (c == 0) {
-                    close(fd_read);
-                    crocodile_process(fd_write, lane);
-                    exit(0);
-                }
-                clean();
-            }
+void pause_producers(pid_t timer_pid,pid_t spawner_pids[], int n_spawners,pid_t gren_pid[], bool gren_active[],pid_t proj_pid[], bool proj_active[]) {
+    //metto in pausa timer
+    kill(timer_pid, SIGSTOP);
+    //metto in pausa ogni spawner (e il suo process-group di crocs)
+    stop_all_spawners(spawner_pids, n_spawners);
+    //metto in pausa granate
+    stop_all_grenades(gren_pid, gren_active);
+    //metto in pausa proiettili
+    stop_all_projectiles(proj_pid, proj_active);
+}
+
+void resume_producers(pid_t timer_pid,pid_t spawner_pids[], int n_spawners,pid_t gren_pid[], bool gren_active[],pid_t proj_pid[], bool proj_active[]) {
+    //riprendo timer
+    kill(timer_pid, SIGCONT);
+    //riprendo spawner (+crocs)
+    resume_all_spawners(spawner_pids, n_spawners);
+    //riprendo granate
+    resume_all_grenades(gren_pid, gren_active);
+    //riprendo proiettili
+    resume_all_projectiles(proj_pid, proj_active);
+}
+
+void stop_all_spawners(pid_t spawner_pids[], int n) {
+    for (int i = 0; i < n; i++) {
+        if (spawner_pids[i] > 0)
+            kill(-spawner_pids[i], SIGSTOP);
+    }
+}
+
+void stop_all_grenades(pid_t gren_pid[], bool gren_active[]) {
+    for (int i = 0; i < MAX_GRENADES; i++) {
+        if (gren_active[i] && gren_pid[i] > 0) {
+            kill(gren_pid[i], SIGSTOP);
+        }
+    }
+}
+
+void stop_all_projectiles(pid_t proj_pid[], bool proj_active[]) {
+    for (int i = 0; i < MAX_PROJECTILES; i++) {
+        if (proj_active[i] && proj_pid[i] > 0) {
+            kill(proj_pid[i], SIGSTOP);
+        }
+    }
+}
+
+void resume_all_spawners(pid_t spawner_pids[], int n) {
+    for (int i = 0; i < n; i++) {
+        if (spawner_pids[i] > 0)
+            kill(-spawner_pids[i], SIGCONT);
+    }
+}
+void resume_all_grenades(pid_t gren_pid[], bool gren_active[]) {
+    for (int i = 0; i < MAX_GRENADES; i++) {
+        if (gren_active[i] && gren_pid[i] > 0) {
+            kill(gren_pid[i], SIGCONT);
+        }
+    }
+}
+void resume_all_projectiles(pid_t proj_pid[], bool proj_active[]) {
+    for (int i = 0; i < MAX_PROJECTILES; i++) {
+        if (proj_active[i] && proj_pid[i] > 0) {
+            kill(proj_pid[i], SIGCONT);
         }
     }
 }
