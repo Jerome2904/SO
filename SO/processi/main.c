@@ -2,9 +2,13 @@
 
 #define NUM_OPTIONS 3
 const char *menu_options[NUM_OPTIONS] = {"GIOCA","ISTRUZIONI", "ESCI"};
+const char *diff_options[NUM_OPTIONS] = {"FACILE","NORMALE","DIFFICILE"};
 
 void show_instructions();
 void exit_program();
+Difficulty show_difficulty_menu(void);
+
+Difficulty difficulty = NORMAL;
 
 int main() {
     // Inizializzazione di ncurses
@@ -78,6 +82,9 @@ int main() {
                 if (selected == 0) {
                     clear();
                     refresh();
+                    difficulty = show_difficulty_menu();
+                    clear();
+                    refresh();
                     start_game();
                 }
                 else if (selected == 1) {
@@ -112,4 +119,33 @@ void exit_program() {
     refresh();
     endwin();
     exit(0);
+}
+
+Difficulty show_difficulty_menu(void) {
+    int sel = 1; //difficoltà predefinita NORMAL
+    keypad(stdscr, TRUE);
+    curs_set(0);
+
+    while (1) {
+        clear();
+        mvprintw(LINES/2 - 2, (COLS - strlen("Seleziona difficolta'"))/2, "Seleziona difficolta'");
+        for (int i = 0; i < NUM_OPTIONS; i++) {
+            int y = LINES/2 + i*2;
+            int x = (COLS - strlen(diff_options[i]))/2;
+            if (i == sel) {
+                attron(A_REVERSE | A_BOLD);
+                mvprintw(y, x, "%s", diff_options[i]);
+                attroff(A_REVERSE | A_BOLD);
+            } else {
+                mvprintw(y, x, "%s", diff_options[i]);
+            }
+        }
+        refresh();
+        int ch = getch();
+        switch (ch) {
+            case KEY_UP: sel = (sel + NUM_OPTIONS - 1) % NUM_OPTIONS; break;
+            case KEY_DOWN: sel = (sel + 1) % NUM_OPTIONS; break;
+            case '\n': return sel;
+        }
+    }
 }

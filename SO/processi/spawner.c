@@ -24,9 +24,22 @@ void spawner_process(int fd_write,int fd_read, RiverLane lane) {
 
     while (1) {
         if (!first) {
-            //delay casuale tra 5 e 7 secondi
-            int delay_s = 5 + rand() % 3;
-            interruptible_sleep(delay_s * 1000000);
+            // delay casuale tra 5 e 7 secondi
+            int base_sleep = 5 + rand() % 3;
+            double total_sleep;
+
+            if (difficulty == EASY) {
+                //rallenta di 1.2×
+                total_sleep = base_sleep * 1.2 * 1000000;
+            }
+            else if (difficulty == HARD) {
+                //accelera di 2× (metà delay)
+                total_sleep = base_sleep * 1000000 / 2;
+            }
+            else {
+                total_sleep = base_sleep * 1000000;
+            }
+            interruptible_sleep(total_sleep);
         }
         first = false;
 

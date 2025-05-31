@@ -25,6 +25,8 @@ void crocodile_init(Entity *crocodile, RiverLane *lane) {
     crocodile->y = lane->y;
     crocodile->dx = lane->direction;
     crocodile->speed = lane->speed;
+    if (difficulty == EASY) crocodile->speed += 50000;
+    else if (difficulty == HARD) crocodile->speed -= 50000;
 
     strcpy(crocodile->sprite[0], "<BBBBBBB>");
     strcpy(crocodile->sprite[1], "<BBBBBBB>");
@@ -40,6 +42,12 @@ void crocodile_process(int fd_write, RiverLane lane) {
     //inizializzo un nuovo coccodrillo
     Entity croc;
     crocodile_init(&croc, &lane);
+    
+    // regola la probabilità di warning/sparo
+    int shoot_chance;
+    if (difficulty == EASY) shoot_chance = 1; //0.1%
+    else if (difficulty == HARD) shoot_chance = 50; //5%
+    else shoot_chance = 30; //3%
 
     //spawn iniziale
     if (lane.direction > 0)
@@ -65,7 +73,7 @@ void crocodile_process(int fd_write, RiverLane lane) {
 
     while ((croc.dx > 0 && croc.x < MAP_WIDTH) || (croc.dx < 0 && croc.x + croc.width > 0)) {
         //se non ha ancora sparato,valutiamo se far partire il warning
-        if (!has_shot && !prefire_warning && (rand() % 100) < 3) {
+        if (!has_shot && !prefire_warning && (rand() % 1000) < shoot_chance) {
             prefire_warning = true;
             prefire_timer = 400000;
             //cambia sprite per il warning

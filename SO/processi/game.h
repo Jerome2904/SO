@@ -95,6 +95,10 @@ typedef enum {
 } GameState;
 
 
+typedef enum { EASY = 0, NORMAL = 1, HARD = 2 } Difficulty;
+extern Difficulty difficulty;
+
+
 extern int game_state;  
 extern int score;       
 extern int round_reset_flag;  
