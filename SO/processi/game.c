@@ -19,7 +19,14 @@ void start_game() {
         exit(EXIT_FAILURE);
     }
 
-    WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, MAP_HEIGHT, 0);
+    int game_starty = (LINES - MAP_HEIGHT) / 2;
+    int game_startx = (COLS - MAP_WIDTH) / 2;
+
+    WINDOW *game_win = newwin(MAP_HEIGHT, MAP_WIDTH, game_starty, game_startx);
+    keypad(game_win, TRUE);
+    box(game_win, 0, 0);
+    WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, game_starty+MAP_HEIGHT, game_startx);
+    box(info_win,0,0);
     
     // Processo rana
     pid_t frog_pid = fork();
@@ -55,7 +62,7 @@ void start_game() {
     create_spawners(fd[1],fd[0], lanes, spawner_pids, NUM_RIVER_LANES);
 
     // Processo padre
-    consumer(fd[0], fd[1], info_win,spawner_pids, NUM_RIVER_LANES,lanes, frog_pid, timer_pid);
+    consumer(fd[0], fd[1],game_win, info_win,spawner_pids, NUM_RIVER_LANES,lanes, frog_pid, timer_pid);
     close(fd[0]); // Chiudi il lato di lettura della pipe
     close(fd[1]); // Chiudi il lato di scrittura della pipe
 

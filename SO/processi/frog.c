@@ -3,7 +3,7 @@
 #include "consumer.h"
 
 void frog_process(int fd_write) {
-    nodelay(stdscr, TRUE);
+    nodelay(stdscr, FALSE);
     keypad(stdscr, TRUE);
     Message msg;
     msg.type = MSG_FROG_UPDATE;
@@ -55,7 +55,6 @@ void frog_process(int fd_write) {
         if (msg.entity.dx != 0 || msg.entity.dy != 0) {
             write(fd_write, &msg, sizeof(msg));
         }
-        usleep(50000);
     }
 }
 

@@ -175,18 +175,18 @@ void projectile_process(int fd_write,int start_x, int start_y, int dx) {
     exit(0);
 }
 
-void draw_projectile(Entity *projectile) {
+void draw_projectile(Entity *projectile,WINDOW* game_win) {
     if (projectile->x >= 0 && projectile->x < MAP_WIDTH && projectile->y >= 0 && projectile->y < MAP_HEIGHT) {
-        attron(COLOR_PAIR(map[projectile->y][projectile->x]));
-        mvaddch(projectile->y, projectile->x, projectile->sprite[0][0]);
-        attroff(COLOR_PAIR(map[projectile->y][projectile->x]));
+        wattron(game_win,COLOR_PAIR(map[projectile->y][projectile->x]));
+        mvwaddch(game_win,projectile->y, projectile->x, projectile->sprite[0][0]);
+        wattroff(game_win,COLOR_PAIR(map[projectile->y][projectile->x]));
     }
 }
 
-void clear_projectile(Entity *projectile) {
+void clear_projectile(Entity *projectile,WINDOW* game_win) {
     if (projectile->x >= 0 && projectile->x < MAP_WIDTH && projectile->y >= 0 && projectile->y < MAP_HEIGHT) {
-        attron(COLOR_PAIR(map[projectile->y][projectile->x]));
-        mvaddch(projectile->y, projectile->x,' ');
-        attroff(COLOR_PAIR(map[projectile->y][projectile->x]));
+        wattron(game_win,COLOR_PAIR(map[projectile->y][projectile->x]));
+        mvwaddch(game_win,projectile->y, projectile->x,' ');
+        wattroff(game_win,COLOR_PAIR(map[projectile->y][projectile->x]));
     }
 }

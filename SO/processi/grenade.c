@@ -37,19 +37,19 @@ void grenade_process(int fd_write,int start_x, int start_y, int dx) {
     exit(0);
 }
 
-void draw_grenade(Entity *grenade) {
+void draw_grenade(Entity *grenade,WINDOW* game_win) {
     if (grenade->x >= 0 && grenade->x < MAP_WIDTH && grenade->y >= 0 && grenade->y < MAP_HEIGHT) {
-        attron(COLOR_PAIR(map[grenade->y][grenade->x]));
-        mvaddch(grenade->y, grenade->x, grenade->sprite[0][0]);
-        attroff(COLOR_PAIR(map[grenade->y][grenade->x]));
+        wattron(game_win,COLOR_PAIR(map[grenade->y][grenade->x]));
+        mvwaddch(game_win,grenade->y, grenade->x, grenade->sprite[0][0]);
+        wattroff(game_win,COLOR_PAIR(map[grenade->y][grenade->x]));
     }
 }
     
-void clear_grenade(Entity *grenade) {
+void clear_grenade(Entity *grenade,WINDOW* game_win) {
     if (grenade->x >= 0 && grenade->x < MAP_WIDTH && grenade->y >= 0 && grenade->y < MAP_HEIGHT) {
-        attron(COLOR_PAIR(map[grenade->y][grenade->x]));
-        mvaddch(grenade->y, grenade->x,' ');
-        attroff(COLOR_PAIR(map[grenade->y][grenade->x]));
+        wattron(game_win,COLOR_PAIR(map[grenade->y][grenade->x]));
+        mvwaddch(game_win,grenade->y, grenade->x,' ');
+        wattroff(game_win,COLOR_PAIR(map[grenade->y][grenade->x]));
     }
 }
 

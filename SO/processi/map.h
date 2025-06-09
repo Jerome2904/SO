@@ -27,11 +27,11 @@ extern int map[MAP_HEIGHT][MAP_WIDTH];
 extern Hole tane[NUM_HOLES];
 
 void init_bckmap();
-void draw_map();
+void draw_map(WINDOW* game_win);
 void init_holes_positions();
 void init_map_holes();
 int check_hole_reached(Entity *frog);
-void hole_update(int hole_index);
+void hole_update(WINDOW* game_win,int hole_index);
 bool checkHoles();
 
 

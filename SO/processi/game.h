@@ -109,7 +109,7 @@ void start_game();
 void game_state_win();
 void game_over();
 void restart_game();
-void draw_entity(Entity *entity);
-void clear_entity(Entity *entity);
+void draw_entity(Entity *entity,WINDOW* win);
+void clear_entity(Entity *entity,WINDOW* win);
 
 #endif
