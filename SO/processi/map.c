@@ -11,6 +11,8 @@ void init_bckmap() {
     init_pair(4, COLOR_WHITE, COLOR_YELLOW); // TANA LIBERA
     init_pair(6, COLOR_GREEN, COLOR_BLUE);   // COCCODRILLO
     init_pair(7, COLOR_YELLOW, COLOR_BLUE);  // COCCODRILLO CATTIVO
+    init_pair(8,COLOR_RED, COLOR_BLUE);  // PROIETTILE
+    
 
     // associo alla matrice map il valore del color pair apposito
     for(int y = 0; y < MAP_HEIGHT; y++) {
@@ -21,16 +23,16 @@ void init_bckmap() {
 }
 
 // Disegna l'intera mappa
-void draw_map(WINDOW* game_win) {
-    werase(game_win);
+void draw_map() {
+    clear();
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            wattron(game_win,COLOR_PAIR(map[y][x]));
-            mvwaddch(game_win,y, x, ' ');
-            wattroff(game_win,COLOR_PAIR(map[y][x]));
+            attron(COLOR_PAIR(map[y][x]));
+            mvaddch(y, x, ' ');
+            attroff(COLOR_PAIR(map[y][x]));
         }
     }
-    wrefresh(game_win);
+    refresh();
 }
 
 
@@ -72,15 +74,15 @@ int check_hole_reached(Entity *frog) {
 }
 
 // Aggiorna la mappa per indicare che la tana è stata occupata
-void hole_update(WINDOW* game_win,int hole_index) {
+void hole_update(int hole_index) {
     tane[hole_index].occupied = true;
     // Ridisegna la tana 
     for (int dy = 0; dy < FROG_HEIGHT; dy++) {
         for (int dx = 0; dx < FROG_WIDTH*2; dx++) {
             map[tane[hole_index].y + dy][tane[hole_index].x + dx] = 2;
-            wattron(game_win,COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
-            mvwaddch(game_win,tane[hole_index].y + dy, tane[hole_index].x + dx, ' ');
-            wattroff(game_win,COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
+            attron(COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
+            mvaddch(tane[hole_index].y + dy, tane[hole_index].x + dx, ' ');
+            attroff(COLOR_PAIR(map[tane[hole_index].y + dy][tane[hole_index].x + dx]));
         }
     }
 }

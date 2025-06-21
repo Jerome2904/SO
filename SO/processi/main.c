@@ -1,12 +1,6 @@
 #include "game.h"
 
 #define NUM_OPTIONS 3
-const char *menu_options[NUM_OPTIONS] = {"GIOCA","ISTRUZIONI", "ESCI"};
-const char *diff_options[NUM_OPTIONS] = {"FACILE","NORMALE","DIFFICILE"};
-
-void show_instructions();
-void exit_program();
-Difficulty show_difficulty_menu(WINDOW* win);
 
 Difficulty difficulty = NORMAL;
 
@@ -25,34 +19,51 @@ int main() {
         init_pair(1, COLOR_RED, COLOR_BLACK);
     }
 
-    //Inizializzo la finestra iniziale
-    int menu_starty = (LINES - MAP_HEIGHT) / 2;
-    int menu_startx = (COLS - MAP_WIDTH) / 2;
+    // Controllo dimensione minima del terminale
+    int min_rows = MAP_HEIGHT + INFO_HEIGHT;
+    int min_cols = MAP_WIDTH;
+    bool size_confirmed = false;
+    while (!size_confirmed) {
+        clear();
+        mvprintw(LINES/2, (COLS - 35)/2,"Current size: %d rows x %d columns", LINES, COLS);
 
-    WINDOW *menu_win=newwin(MAP_HEIGHT, MAP_WIDTH, menu_starty, menu_startx);
-    keypad(menu_win, TRUE);
-    box(menu_win, 0, 0);
-    refresh();
-
+        if (LINES == min_rows && COLS == min_cols) {
+            attron(A_BOLD | COLOR_PAIR(1));
+            mvprintw(LINES/2 - 2, (COLS - 26) / 2,"Terminal size is correct!");
+            attroff(A_BOLD | COLOR_PAIR(1));
+            mvprintw(LINES/2 + 2, (COLS - 44) / 2,"Press ENTER to continue or resize to adjust");
+            
+            refresh();
+            int ch = getch();
+            if (ch == '\n') {
+                size_confirmed = true;
+            }
+        } else {
+            mvprintw(LINES/2 - 2, (COLS - 28)/2, "Resize terminal before play");
+            mvprintw(LINES/2 + 2, (COLS - 43)/2,"Please set at least %d rows and %d columns", min_rows, min_cols);
+        }
+        refresh();
+        usleep(50000);
+    }
+    clear();
 
     int selected = 0;
     while (1) {
+        const char *menu_options[NUM_OPTIONS] = {"GIOCA","ISTRUZIONI", "ESCI"};
         // Disegna il menu
-        werase(menu_win);
-        box(menu_win,0,0);
-        mvwprintw(menu_win,5, (MAP_WIDTH - strlen("FROGGER RESURRECTION")) / 2,"FROGGER RESURRECTION");
+        clear();
+        mvprintw(10, (COLS - strlen("FROGGER RESURRECTION")) / 2,"FROGGER RESURRECTION");
         
         for (int i = 0; i < NUM_OPTIONS; i++) {
             if (i == selected) {
-                wattron(menu_win,A_REVERSE | A_BOLD | COLOR_PAIR(1));
-                mvwprintw(menu_win,10 + i*2, (MAP_WIDTH - strlen(menu_options[i])) / 2,"%s", menu_options[i]);
-                wattroff(menu_win,A_REVERSE | A_BOLD | COLOR_PAIR(1));
+                attron(A_REVERSE | A_BOLD | COLOR_PAIR(1));
+                mvprintw(15 + i*2, (COLS - strlen(menu_options[i])) / 2,"%s", menu_options[i]);
+                attroff(A_REVERSE | A_BOLD | COLOR_PAIR(1));
             } else {
-                mvwprintw(menu_win,10 + i*2, (MAP_WIDTH - strlen(menu_options[i])) / 2,"%s", menu_options[i]);
+                mvprintw(15 + i*2, (COLS - strlen(menu_options[i])) / 2,"%s", menu_options[i]);
             }
         }
-
-        wrefresh(menu_win);
+        refresh();
 
         int ch = getch();
         switch (ch) {
@@ -64,14 +75,15 @@ int main() {
                 break;
             case '\n':
                 if (selected == 0) {
-                    werase(menu_win);
-                    wrefresh(menu_win);
-                    difficulty = show_difficulty_menu(menu_win);
-                    werase(menu_win);
+                    clear();
+                    refresh();
+                    difficulty = show_difficulty_menu();
+                    clear();
+                    refresh();
                     start_game();
                 }
                 else if (selected == 1) {
-                    show_instructions(menu_win);
+                    show_instructions();
                 }
                 else if (selected == 2) {
                     exit_program();
@@ -79,23 +91,22 @@ int main() {
                 break;
         }
     }
-    delwin(menu_win);
+
     endwin();
     return 0;
 }
 
-void show_instructions(WINDOW* win) {
-    werase(win);
-    box(win,0,0);
-    mvwprintw(win,5,(MAP_WIDTH-strlen("ISTRUZIONI"))/2, "ISTRUZIONI");
-    mvwprintw(win,10,(MAP_WIDTH-strlen("1. Muovi la rana con le frecce."))/2, "1. Muovi la rana con le frecce.");
-    mvwprintw(win,12,(MAP_WIDTH-strlen("2. Evita gli ostacoli e raggiungi la tana."))/2, "2. Evita gli ostacoli e raggiungi la tana.");
-    mvwprintw(win,14,(MAP_WIDTH-strlen("3. Premi SPAZIO per lanciare granate."))/2, "3. Premi SPAZIO per lanciare granate.");
-    mvwprintw(win,16,(MAP_WIDTH-strlen("Premi un tasto per tornare al menu..."))/2, "Premi un tasto per tornare al menu...");
-    wrefresh(win);
+void show_instructions() {
+    clear();
+    mvprintw(3, (COLS - 11)/2, "ISTRUZIONI");
+    mvprintw(6, (COLS - 32)/2, "1. Muovi la rana con le frecce.");
+    mvprintw(9, (COLS - 43)/2, "2. Evita gli ostacoli e raggiungi la tana.");
+    mvprintw(12, (COLS - 38)/2, "3. Premi SPAZIO per lanciare granate.");
+    mvprintw(15, (COLS - 38)/2, "Premi un tasto per tornare al menu...");
+    refresh();
     getch();
-    werase(win);
-    wrefresh(win);
+    clear();
+    refresh();
 }
 
 void exit_program() {
@@ -105,27 +116,25 @@ void exit_program() {
     exit(0);
 }
 
-Difficulty show_difficulty_menu(WINDOW* win) {
+Difficulty show_difficulty_menu() {
     int sel = 1; //difficoltà predefinita NORMAL
     keypad(stdscr, TRUE);
-    curs_set(0);
-
+    const char *diff_options[NUM_OPTIONS] = {"FACILE","NORMALE","DIFFICILE"};
     while (1) {
-        werase(win);
-        box(win,0,0);
-        mvwprintw(win,5, (MAP_WIDTH - strlen("Seleziona difficolta'"))/2, "Seleziona difficolta'");
+        clear();
+        mvprintw(LINES/2 - 2, (COLS - strlen("Seleziona difficolta'"))/2, "Seleziona difficolta'");
         for (int i = 0; i < NUM_OPTIONS; i++) {
-            int y = 10 + i*2;
-            int x = (MAP_WIDTH - strlen(diff_options[i]))/2;
+            int y = LINES/2 + i*2;
+            int x = (COLS - strlen(diff_options[i]))/2;
             if (i == sel) {
-                wattron(win,A_REVERSE | A_BOLD);
-                mvwprintw(win,y, x, "%s", diff_options[i]);
-                wattroff(win,A_REVERSE | A_BOLD);
+                attron(A_REVERSE | A_BOLD);
+                mvprintw(y, x, "%s", diff_options[i]);
+                attroff(A_REVERSE | A_BOLD);
             } else {
-                mvwprintw(win, y, x, "%s", diff_options[i]);
+                mvprintw(y, x, "%s", diff_options[i]);
             }
         }
-        wrefresh(win);
+        refresh();
         int ch = getch();
         switch (ch) {
             case KEY_UP: sel = (sel + NUM_OPTIONS - 1) % NUM_OPTIONS; break;

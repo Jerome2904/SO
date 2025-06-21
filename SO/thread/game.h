@@ -98,16 +98,14 @@ typedef struct {
 
 
 
-// Struttura del buffer circolare
 typedef struct {
     Message buffer[BUFFER_SIZE];
-    int in;
-    int out;
-    int count;
-    pthread_mutex_t mutex;
-    pthread_cond_t full;
-    pthread_cond_t empty;
+    int in, out,count; // in/out index e contatore
+    sem_t empty;// quante celle vuote
+    sem_t full; // quante celle piene
+    pthread_mutex_t mutex;// per proteggere in/out
 } CircularBuffer;
+
 
 //Stato attuale del gioco
 typedef enum {

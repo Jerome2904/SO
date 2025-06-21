@@ -82,7 +82,7 @@ typedef enum {
 typedef struct {
     MessageType type;
     int lane_id;
-    int id;
+    pid_t id;
     Entity entity;
 } Message;
 
@@ -105,11 +105,12 @@ extern int round_reset_flag;
 
 void show_instructions();
 void exit_program();
+Difficulty show_difficulty_menu();
 void start_game();
 void game_state_win();
 void game_over();
 void restart_game();
-void draw_entity(Entity *entity,WINDOW* win);
-void clear_entity(Entity *entity,WINDOW* win);
+void draw_entity(Entity *entity);
+void clear_entity(Entity *entity);
 
 #endif
