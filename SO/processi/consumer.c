@@ -334,7 +334,7 @@ void consumer(int fd_read,int fd_write,WINDOW *info_win,pid_t spawner_pids[],int
                 //padre registra il nuovo proiettile nel primo slot libero
                 for (int i = 0; i < MAX_PROJECTILES; i++) {
                     if (!proj_active[i]) {
-                        proj_active[i]   = true;
+                        proj_active[i] = true;
                         proj_pid[i] = p;
                         proj_prev[i] = msg.entity;
                         projectiles[i] = msg.entity;

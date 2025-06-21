@@ -19,14 +19,17 @@ bool paused;
 
 bool start_game() {
     srand(time(NULL));
+    //inizializza i mutex e cond
     pthread_mutex_init(&render_mutex,NULL);
     pthread_mutex_init(&pause_mutex,NULL);
     pthread_cond_init(&pause_cond,NULL);
     pthread_mutex_init(&game_state_mutex, NULL);
+    //inizializza lo stato del gioco
     game_state = GAME_RUNNING;
     score = INITIAL_SCORE;
     paused = false;
-
+    
+    //crea la finestra info
     int game_starty = (LINES - MAP_HEIGHT) / 2;
     int game_startx = (COLS - MAP_WIDTH) / 2;
     WINDOW *info_win = newwin(INFO_HEIGHT, MAP_WIDTH, game_starty+MAP_HEIGHT-1, game_startx);

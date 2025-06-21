@@ -41,9 +41,7 @@ void crocodile_init(Entity *crocodile, RiverLane *lane) {
 void crocodile_process(int fd_write, RiverLane lane) {
     pid_t my_pid = getpid(); // ottengo il pid del processo corrente
 
-    //sleep casuale tra 1 e 2 secondi
-    int delay_ms = 1 + rand() % 2;
-    usleep(delay_ms * 1000000);
+    
 
     //inizializzo un nuovo coccodrillo
     Entity croc;

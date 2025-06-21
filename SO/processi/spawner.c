@@ -21,7 +21,9 @@ void spawner_process(int fd_write,int fd_read, RiverLane lane) {
     bool first = true; //indica il primo spawn
     pid_t self = getpid(); //ottengo il pid del processo corrente
     srand(time(NULL) ^ self); //seme casuale basato sul pid del processo
-
+    //sleep casuale tra 1 e 2 secondi
+    int delay_ms = 1 + rand() % 2;
+    usleep(delay_ms * 1000000);
     while (1) {
         //se è il primo spawn, il coccodrillo spawna subito
         if (!first) {
