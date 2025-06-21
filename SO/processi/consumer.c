@@ -405,7 +405,6 @@ void consumer(int fd_read,int fd_write,WINDOW *info_win,pid_t spawner_pids[],int
         mvwprintw(info_win, 1, 2,"Lives: %-25dScore: %-25dTime: %-3d",lives, score, time);
         wrefresh(info_win);
 
-
         refresh(); // Aggiorna tutto lo schermo
     }
 }
